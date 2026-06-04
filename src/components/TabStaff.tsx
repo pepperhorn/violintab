@@ -475,10 +475,20 @@ function layoutBg(): string {
   return "#ffffff";
 }
 
-/** Rests drawn as vector shapes (one per duration) so they render identically
- *  on screen, in PNG, and in PDF. The musical Unicode rest glyphs are avoided
- *  because embedded TTFs lack them and svg2pdf mangles the surrogate pairs.
- *  Triplet rests use the base-duration glyph; dotted rests get an augmentation dot. */
+// SMuFL codepoints for rests in the Petaluma music font (Private Use Area, all
+// in the BMP so they are single UTF-16 units and embed/serialize cleanly).
+const REST_CODEPOINT: Record<string, string> = {
+  w: String.fromCharCode(0xe4e3), // restWhole
+  h: String.fromCharCode(0xe4e4), // restHalf
+  q: String.fromCharCode(0xe4e5), // restQuarter
+  e: String.fromCharCode(0xe4e6), // rest8th
+  s: String.fromCharCode(0xe4e7), // rest16th
+};
+
+/** A rest drawn with the Petaluma SMuFL font (one glyph per duration). The glyph
+ *  is sized to the staff (SMuFL: 1 staff space = 0.25em) and registered on the
+ *  staff's middle line. Triplet rests use the base-duration glyph; dotted rests
+ *  get an augmentation dot. Petaluma is embedded in the PDF via pdfFonts.ts. */
 function restGlyph(
   cx: number,
   cy: number,
@@ -487,72 +497,25 @@ function restGlyph(
   duration: Duration,
   dotted: boolean,
 ): ReactElement {
-  const s = size;
-  const g = LAYOUT.LINE_GAP;
   const base = duration.endsWith("t") ? duration.slice(0, -1) : duration;
-  const lw = Math.max(1.4, s * 0.15);
-  const parts: ReactElement[] = [];
-
-  // Knockout so the rest reads cleanly over the staff lines.
-  const koW = s * 1.6;
-  const koH = g + s * 0.7;
-  parts.push(
-    <rect key="ko" x={cx - koW / 2} y={cy - koH / 2} width={koW} height={koH} fill={layoutBg()} />,
-  );
-
-  if (base === "w" || base === "h") {
-    // A block on a staff line: whole hangs below the line, half sits above it.
-    const lineRef = cy - g / 2; // the A string line (2nd from top)
-    const w = s * 0.95;
-    const h = g * 0.5;
-    const y = base === "w" ? lineRef : lineRef - h;
-    parts.push(<rect key="bar" x={cx - w / 2} y={y} width={w} height={h} fill={color} />);
-  } else if (base === "q") {
-    // Quarter rest: zig-zag with a bottom curl.
-    const ht = s * 1.3;
-    const w = ht * 0.4;
-    const top = cy - ht / 2;
-    const d =
-      `M ${cx - w * 0.35} ${top} ` +
-      `L ${cx + w * 0.5} ${top + ht * 0.32} ` +
-      `L ${cx - w * 0.35} ${top + ht * 0.54} ` +
-      `L ${cx + w * 0.55} ${top + ht * 0.9} ` +
-      `Q ${cx + w * 0.1} ${top + ht} ${cx - w * 0.2} ${top + ht * 0.92}`;
-    parts.push(
-      <path key="q" d={d} fill="none" stroke={color} strokeWidth={lw}
-        strokeLinecap="round" strokeLinejoin="round" />,
-    );
-  } else {
-    // Eighth (1 flag) / sixteenth (2 flags): a slanted stem with hooked blobs.
-    const flags = base === "s" ? 2 : 1;
-    const flagGap = s * 0.46;
-    const ht = s * 1.2 + (flags - 1) * flagGap;
-    const top = cy - ht / 2;
-    const bottom = cy + ht / 2;
-    const stemTopX = cx + s * 0.26;
-    const stemBotX = cx - s * 0.32;
-    const stemXAt = (y: number) =>
-      stemTopX + ((y - top) / (bottom - top)) * (stemBotX - stemTopX);
-    parts.push(
-      <line key="stem" x1={stemTopX} y1={top} x2={stemBotX} y2={bottom}
-        stroke={color} strokeWidth={lw} strokeLinecap="round" />,
-    );
-    const r = s * 0.16;
-    for (let k = 0; k < flags; k++) {
-      const fy = top + r + k * flagGap;
-      const sx = stemXAt(fy);
-      parts.push(<circle key={`fl${k}`} cx={sx - s * 0.14} cy={fy} r={r} fill={color} />);
-      parts.push(
-        <line key={`fc${k}`} x1={sx} y1={fy + r * 0.25} x2={sx - s * 0.14} y2={fy}
-          stroke={color} strokeWidth={lw * 0.9} strokeLinecap="round" />,
-      );
-    }
-  }
-
+  const ch = REST_CODEPOINT[base] ?? REST_CODEPOINT.q;
+  const fontSize = LAYOUT.LINE_GAP * 4; // SMuFL staff-space scaling
+  const parts: ReactElement[] = [
+    <text
+      key="rest"
+      x={cx}
+      y={cy}
+      fontFamily="Petaluma"
+      fontSize={fontSize}
+      fill={color}
+      textAnchor="middle"
+    >
+      {ch}
+    </text>,
+  ];
   if (dotted) {
-    const dr = Math.max(1.5, s * 0.13);
-    parts.push(<circle key="dot" cx={cx + s * 0.6} cy={cy} r={dr} fill={color} />);
+    const dr = Math.max(1.5, size * 0.13);
+    parts.push(<circle key="dot" cx={cx + size * 0.7} cy={cy} r={dr} fill={color} />);
   }
-
   return <g className="tab-rest">{parts}</g>;
 }

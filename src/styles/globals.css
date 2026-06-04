@@ -2,6 +2,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Petaluma: SMuFL music font (Steinberg, SIL OFL). Used for rest glyphs in the
+   tab staff. Converted to TTF so it embeds in the PDF export. */
+@font-face {
+  font-family: 'Petaluma';
+  src: url('/fonts/Petaluma.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

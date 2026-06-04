@@ -31,6 +31,8 @@ const EMBED_FONTS: Record<string, FontFace[]> = {
   Caveat: [{ url: "/fonts/Caveat-VF.ttf", weight: 400 }],
   "Shadows Into Light": [{ url: "/fonts/ShadowsIntoLight-Regular.ttf", weight: 400 }],
   Inter: [{ url: "/fonts/Inter-VF.ttf", weight: 400 }],
+  // SMuFL music font for rest glyphs; one weight, reused across all lookups.
+  Petaluma: [{ url: "/fonts/Petaluma.ttf", weight: 400 }],
 };
 
 // Weights our SVG text uses (svguitar defaults + our role/caption styles).
