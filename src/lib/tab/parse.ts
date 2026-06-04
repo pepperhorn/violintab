@@ -56,6 +56,22 @@ function parseChordToken(content: string): ChordAnnotation | null {
   return label ? { label } : null;
 }
 
+interface BarToken {
+  start?: boolean; // forward repeat opens here ("|:")
+  end?: boolean; // backward repeat closes here (":|")
+  count?: number; // play-count on a backward repeat (":|x3")
+}
+
+/** Recognise a barline / repeat token: `|`, `|:`, `:|`, `:|:`, `:|x3`. */
+export function parseBarToken(raw: string): BarToken | null {
+  if (raw === "|") return {};
+  if (raw === "|:") return { start: true };
+  if (raw === ":|:") return { start: true, end: true };
+  const m = /^:\|(?:x?(\d+))?$/.exec(raw);
+  if (m) return { end: true, count: m[1] ? Number(m[1]) : undefined };
+  return null;
+}
+
 export function parseTab(text: string, opts: ParseOptions): TabDoc {
   const capacity = measureCapacity(opts.timeSig);
 
@@ -69,10 +85,28 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
   let lastBeat: Beat | null = null;
   let pendingChord: ChordAnnotation | null = null;
   let pendingChordLine = 0;
+  let pendingRepeatStart = false;
 
-  function closeMeasure(forced: boolean) {
-    if (curMeasure.length === 0) return;
-    measures.push({ beats: curMeasure, forcedBarline: forced });
+  function closeMeasure(forced: boolean, repeat?: { end?: boolean; count?: number }) {
+    if (curMeasure.length === 0) {
+      // A backward repeat right after a barline attaches to the previous measure.
+      if (repeat?.end && measures.length) {
+        const prev = measures[measures.length - 1];
+        prev.repeatEnd = true;
+        if (repeat.count) prev.repeatCount = repeat.count;
+      }
+      return;
+    }
+    const m: Measure = { beats: curMeasure, forcedBarline: forced };
+    if (pendingRepeatStart) {
+      m.repeatStart = true;
+      pendingRepeatStart = false;
+    }
+    if (repeat?.end) {
+      m.repeatEnd = true;
+      if (repeat.count) m.repeatCount = repeat.count;
+    }
+    measures.push(m);
     curMeasure = [];
     curFrac = 0;
   }
@@ -95,9 +129,11 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
     const tokens = line.match(/\[[^\]]*\]|\S+/g) ?? [];
 
     for (const raw of tokens) {
-      // Barline
-      if (raw === "|") {
-        closeMeasure(true);
+      // Barline / repeat
+      const bar = parseBarToken(raw);
+      if (bar) {
+        closeMeasure(true, bar.end ? { end: true, count: bar.count } : undefined);
+        if (bar.start) pendingRepeatStart = true;
         continue;
       }
       // Chord annotation (text only) attaches to the NEXT beat

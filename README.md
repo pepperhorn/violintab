@@ -36,6 +36,7 @@ Beats reuse the `frames` duration grammar:
 | `r`           | rest                                               |
 | `x`           | repeat the previous beat                           |
 | `|`           | barline                                            |
+| `|:` … `:|`   | repeat section (`:|x3` adds a play-count)          |
 | `[Am]`        | chord-symbol text above the beat                   |
 
 ### Example

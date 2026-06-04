@@ -1,6 +1,6 @@
 // src/lib/tab/parse.test.ts
 import { describe, expect, it } from "vitest";
-import { parseNote, parseTab } from "./parse";
+import { parseBarToken, parseNote, parseTab } from "./parse";
 import type { TimeSig } from "./types";
 
 const TS: TimeSig = { num: 4, den: 4 };
@@ -109,5 +109,50 @@ describe("parseTab", () => {
   it("reports an error for a dangling chord label", () => {
     const doc = parse("q:e1 [Am]");
     expect(doc.errors.some((e) => e.message.includes("no following note"))).toBe(true);
+  });
+
+  it("marks forward and backward repeats on the right measures", () => {
+    const doc = parse("|: q:e0 q:e1 q:e2 q:e3 :| q:a0");
+    expect(doc.errors).toEqual([]);
+    expect(doc.measures[0].repeatStart).toBe(true);
+    expect(doc.measures[0].repeatEnd).toBe(true);
+    expect(doc.measures[1].repeatStart).toBeUndefined();
+  });
+
+  it("spans a repeat across several measures", () => {
+    const doc = parse("|: q:e0 q:e1 q:e2 q:e3 | q:a0 a1 a2 a3 :|");
+    expect(doc.measures[0].repeatStart).toBe(true);
+    expect(doc.measures[0].repeatEnd).toBeUndefined();
+    expect(doc.measures[1].repeatStart).toBeUndefined();
+    expect(doc.measures[1].repeatEnd).toBe(true);
+  });
+
+  it("reads a repeat play-count", () => {
+    const doc = parse("|: q:e0 q:e1 q:e2 q:e3 :|x3");
+    expect(doc.measures[0].repeatEnd).toBe(true);
+    expect(doc.measures[0].repeatCount).toBe(3);
+  });
+
+  it("supports a back-to-back end+start repeat (:|:)", () => {
+    const doc = parse("|: q:e0 q:e1 q:e2 q:e3 :|: q:a0 a1 a2 a3 :|");
+    expect(doc.measures[0].repeatEnd).toBe(true);
+    expect(doc.measures[1].repeatStart).toBe(true);
+    expect(doc.measures[1].repeatEnd).toBe(true);
+  });
+});
+
+describe("parseBarToken", () => {
+  it("recognises the barline and repeat tokens", () => {
+    expect(parseBarToken("|")).toEqual({});
+    expect(parseBarToken("|:")).toEqual({ start: true });
+    expect(parseBarToken(":|")).toEqual({ end: true, count: undefined });
+    expect(parseBarToken(":|:")).toEqual({ start: true, end: true });
+    expect(parseBarToken(":|x3")).toEqual({ end: true, count: 3 });
+    expect(parseBarToken(":|2")).toEqual({ end: true, count: 2 });
+  });
+
+  it("returns null for non-barline tokens", () => {
+    expect(parseBarToken("q:e1")).toBeNull();
+    expect(parseBarToken("e0")).toBeNull();
   });
 });

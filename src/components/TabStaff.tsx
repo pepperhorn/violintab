@@ -173,18 +173,8 @@ function SystemView({
         </g>
       )}
 
-      {/* Barlines */}
-      {sys.barlines.map((bar, i) => (
-        <line
-          key={`bar-${i}`}
-          x1={bar.x}
-          y1={sys.lineYs[0]}
-          x2={bar.x}
-          y2={sys.lineYs[layout.stringCount - 1]}
-          stroke={color}
-          strokeWidth={bar.final ? 3 : 1.5}
-        />
-      ))}
+      {/* Barlines (single / final / repeat start + end) */}
+      {drawBarlines(sys, layout, color, fontFamily)}
 
       {/* Beats */}
       {sys.beats.map((beat) => (
@@ -273,6 +263,59 @@ function drawChordRow(
       </text>,
     );
   }
+  return out;
+}
+
+function drawBarlines(
+  sys: TabSystem,
+  layout: TabLayout,
+  color: string,
+  fontFamily: string,
+): ReactElement[] {
+  const top = sys.lineYs[0];
+  const bottom = sys.lineYs[layout.stringCount - 1];
+  const cy = (top + bottom) / 2;
+  const g = LAYOUT.LINE_GAP;
+  const r = g * 0.16;
+  const out: ReactElement[] = [];
+  const vline = (x: number, w: number, key: string) => (
+    <line key={key} x1={x} y1={top} x2={x} y2={bottom} stroke={color} strokeWidth={w} />
+  );
+  const dots = (x: number, key: string) => [
+    <circle key={`${key}d1`} cx={x} cy={cy - g * 0.3} r={r} fill={color} />,
+    <circle key={`${key}d2`} cx={x} cy={cy + g * 0.3} r={r} fill={color} />,
+  ];
+
+  sys.barlines.forEach((bar, i) => {
+    const x = bar.x;
+    const k = `bar-${i}`;
+    if (bar.kind === "single") {
+      out.push(vline(x, 1.5, k));
+    } else if (bar.kind === "final") {
+      out.push(vline(x - 3.5, 1.5, `${k}thin`), vline(x, 3, `${k}thick`));
+    } else if (bar.kind === "repeatStart") {
+      out.push(vline(x, 3, `${k}thick`), vline(x + 4.5, 1.5, `${k}thin`), ...dots(x + 9.5, k));
+    } else if (bar.kind === "repeatEnd") {
+      out.push(...dots(x - 9.5, k), vline(x - 4.5, 1.5, `${k}thin`), vline(x, 3, `${k}thick`));
+      if (bar.count && bar.count > 1) {
+        out.push(
+          <text
+            key={`${k}cnt`}
+            x={x}
+            y={top - 6}
+            fontSize={10}
+            fontFamily={fontFamily}
+            fontStyle="italic"
+            fill={color}
+            textAnchor="middle"
+            dominantBaseline="central"
+          >
+            {`×${bar.count}`}
+          </text>,
+        );
+      }
+    }
+  });
   return out;
 }
 

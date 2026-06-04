@@ -10,6 +10,7 @@ export const LAYOUT = {
   STEM_LEN: 20,
   SYSTEM_GAP: 80,
   MEASURE_PAD: 16,
+  REPEAT_PAD: 14, // extra left inset after a forward-repeat barline
   BEAT_MIN_W: 28,
   BEAT_SCALE: 150,
   BOTTOM_PAD: 56,
@@ -36,9 +37,12 @@ export interface PlacedBeat {
   posLabel?: string; // "Nth pos." drawn below this beat when the hand position changes
 }
 
+export type BarlineKind = "single" | "final" | "repeatStart" | "repeatEnd";
+
 export interface PlacedBarline {
   x: number;
-  final: boolean;
+  kind: BarlineKind;
+  count?: number; // play-count shown at a backward repeat
 }
 
 export interface TabSystem {
@@ -185,6 +189,12 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
     rowMeasures.forEach((measure) => {
       const localMeasureIndex = measureCursor;
 
+      // Forward-repeat barline at the measure's left edge; nudge beats right of it.
+      if (measure.repeatStart) {
+        barlines.push({ x: x + 3, kind: "repeatStart" });
+        x += LAYOUT.REPEAT_PAD;
+      }
+
       // Beam grouping within this measure.
       let activeGroup: number | null = null;
       const groupForBeat: (number | null)[] = [];
@@ -240,7 +250,12 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
       });
 
       const barX = x + LAYOUT.MEASURE_PAD / 2;
-      barlines.push({ x: barX, final: localMeasureIndex === totalMeasures - 1 });
+      const kind: BarlineKind = measure.repeatEnd
+        ? "repeatEnd"
+        : localMeasureIndex === totalMeasures - 1
+        ? "final"
+        : "single";
+      barlines.push({ x: barX, kind, count: measure.repeatCount });
       x += LAYOUT.MEASURE_PAD;
       measureCursor += 1;
     });
