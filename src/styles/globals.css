@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Patrick+Hand&family=Caveat:wght@400;500;600;700&family=Shadows+Into+Light&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Patrick+Hand&family=Caveat:wght@400;500;600;700&family=Shadows+Into+Light&family=Anton&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -14,23 +14,42 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   WARHOL PRINTMAKER SHOP — pop-art screenprint theme.
+   Cream paper stock, CMYK-ish pop inks, hard offset shadows,
+   halftone dots, fat poster type. Notation stays black on white.
+   ============================================================ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --radius: 0.7rem;
+
+  /* Ink swatches */
+  --paper: #f6efda;
+  --ink: #17120d;
+  --pop-pink: #ff2e88;
+  --pop-cyan: #10c4d8;
+  --pop-yellow: #ffc20a;
+  --pop-orange: #ff5a1f;
+  --pop-violet: #6c4ce0;
+  --pop-green: #1bb36a;
+
+  /* Design tokens consumed by Tailwind utilities (bg-background, border, etc.) */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #fffdf4;
+  --card-foreground: var(--ink);
+  --primary: var(--pop-pink);
+  --primary-foreground: #fffdf4;
+  --muted: #ece3c8;
+  --muted-foreground: #6f6347;
+  --border: var(--ink);
+  --input: var(--ink);
+  --ring: var(--pop-cyan);
 }
 
 @theme inline {
   --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Anton', 'Poppins', sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -53,5 +72,240 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
+    /* Halftone dot stock */
+    background-color: var(--paper);
+    background-image: radial-gradient(circle, rgba(23, 18, 13, 0.07) 22%, transparent 23%);
+    background-size: 15px 15px;
   }
+  /* Atmospheric pop blooms behind everything */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(42vw 42vw at 104% -8%, color-mix(in srgb, var(--pop-yellow) 60%, transparent), transparent 62%),
+      radial-gradient(40vw 40vw at -10% 110%, color-mix(in srgb, var(--pop-cyan) 50%, transparent), transparent 62%),
+      radial-gradient(26vw 26vw at 88% 116%, color-mix(in srgb, var(--pop-pink) 38%, transparent), transparent 64%);
+  }
+}
+
+/* ---- Registration marks at the page corners (print-shop flourish) ---- */
+.reg-mark {
+  position: fixed;
+  width: 26px;
+  height: 26px;
+  z-index: 60;
+  pointer-events: none;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background:
+    linear-gradient(var(--ink), var(--ink)) center / 1.5px 26px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) center / 26px 1.5px no-repeat;
+  opacity: 0.7;
+}
+.reg-tl { top: 16px; left: 16px; }
+.reg-tr { top: 16px; right: 16px; }
+.reg-bl { bottom: 16px; left: 16px; }
+.reg-br { bottom: 16px; right: 16px; }
+
+/* ---- Header: screenprint poster ---- */
+.page-header { position: relative; }
+
+.page-eyebrow {
+  align-self: flex-start;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--ink);
+  background: var(--pop-yellow);
+  border: 2.5px solid var(--ink);
+  padding: 0.35rem 0.7rem;
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: rotate(-2.5deg);
+}
+
+.page-title {
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: clamp(3rem, 10vw, 7.5rem);
+  line-height: 0.85;
+  letter-spacing: 0.01em;
+  color: var(--paper);
+  -webkit-text-stroke: 2.5px var(--ink);
+  text-shadow: 7px 7px 0 var(--pop-cyan), 14px 14px 0 var(--pop-pink);
+  margin: 0.12em 0 0.28em;
+}
+
+.page-subtitle {
+  color: var(--ink);
+  font-weight: 500;
+  max-width: 44rem;
+}
+
+/* Printer's colour bar under the title */
+.ink-swatches {
+  display: flex;
+  width: max-content;
+  margin-top: 0.4rem;
+  border: 2.5px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.ink-swatches span {
+  width: 42px;
+  height: 20px;
+  background: var(--sw);
+  border-right: 2px solid var(--ink);
+}
+.ink-swatches span:last-child { border-right: 0; }
+
+/* ---- Cards as silkscreen panels with coloured offset shadows ---- */
+.card {
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 8px 8px 0 var(--ink);
+}
+.tab-setup-card { box-shadow: 8px 8px 0 var(--pop-cyan); }
+.look-feel-card { box-shadow: 8px 8px 0 var(--pop-pink); }
+.preview-card { box-shadow: 8px 8px 0 var(--pop-yellow); }
+.tab-editor-card { box-shadow: 8px 8px 0 var(--pop-orange); }
+.tab-json-card { box-shadow: 8px 8px 0 var(--pop-violet); }
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.card-title::before {
+  content: "";
+  width: 0.7em;
+  height: 0.7em;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--pop-pink);
+}
+.tab-setup-card .card-title::before { background: var(--pop-cyan); }
+.look-feel-card .card-title::before { background: var(--pop-pink); }
+.preview-card .card-title::before { background: var(--pop-yellow); }
+.tab-editor-card .card-title::before { background: var(--pop-orange); }
+.tab-json-card .card-title::before { background: var(--pop-violet); }
+
+/* ---- Buttons: flat ink chips that press into the page ---- */
+.btn {
+  border: 2.5px solid var(--ink);
+  border-radius: 9px;
+  font-weight: 700;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.12s ease;
+}
+.btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+/* Loud, distinct ink per action */
+.play-btn { background: var(--pop-green); color: var(--ink); }
+.stop-btn { background: var(--pop-orange); color: var(--ink); }
+.download-svg-btn { background: var(--pop-cyan); color: var(--ink); }
+.download-png-btn { background: var(--pop-yellow); color: var(--ink); }
+.download-pdf-btn { background: var(--pop-pink); color: #fffdf4; }
+.copy-json-btn { background: var(--pop-cyan); color: var(--ink); }
+.save-json-btn { background: var(--pop-yellow); color: var(--ink); }
+
+/* ---- Form fields: crisp white plates with ink rules ---- */
+.input,
+.select {
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.input:focus-visible,
+.select:focus-visible {
+  box-shadow: 3px 3px 0 var(--pop-cyan);
+}
+.label > span {
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 0.7rem;
+  color: var(--ink);
+}
+
+/* ---- The tab editor: a typewritten manuscript ---- */
+.tab-editor-textarea {
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  background: #ffffff;
+  font-family: 'Space Mono', monospace !important;
+  box-shadow: 5px 5px 0 var(--pop-cyan);
+}
+.tab-editor-textarea:focus {
+  outline: none;
+  box-shadow: 5px 5px 0 var(--pop-pink);
+}
+
+.tab-help { font-family: 'Space Mono', monospace; }
+.tab-help code {
+  background: var(--pop-yellow);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 0 4px;
+  color: var(--ink);
+  font-weight: 700;
+}
+.tab-errors {
+  font-family: 'Space Mono', monospace;
+  color: var(--pop-orange) !important;
+  font-weight: 700;
+}
+
+/* ---- Preview: a pinned print proof ---- */
+.preview-svg-wrap {
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+}
+/* Stamp lives on the non-scrolling parent so it isn't clipped by overflow-x. */
+.preview-measure { position: relative; }
+.preview-measure::before {
+  content: "PROOF";
+  position: absolute;
+  top: -13px;
+  right: 14px;
+  z-index: 3;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  background: var(--pop-pink);
+  color: #fffdf4;
+  border: 2px solid var(--ink);
+  padding: 2px 8px;
+  box-shadow: 2px 2px 0 var(--ink);
+  transform: rotate(2.5deg);
+}
+
+.tab-json {
+  font-family: 'Space Mono', monospace;
+  border: 2px solid var(--ink);
+  background: #ffffff !important;
+}
+
+.page-footer {
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink);
 }
