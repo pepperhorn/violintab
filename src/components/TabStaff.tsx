@@ -389,18 +389,12 @@ function BeatView({
       )}
 
       {beat.isRest ? (
-        <text
-          x={beat.x}
-          y={sys.lineYs[Math.floor(layout.stringCount / 2)]}
-          fontSize={noteFontSize}
-          fontFamily={fontFamily}
-          fontStyle="italic"
-          fill={color}
-          textAnchor="middle"
-          dominantBaseline="central"
-        >
-          𝄽
-        </text>
+        restGlyph(
+          beat.x,
+          (sys.lineYs[0] + sys.lineYs[layout.stringCount - 1]) / 2,
+          noteFontSize,
+          color,
+        )
       ) : (
         beat.notes.map((n, i) => {
           const y = sys.lineYs[n.string - 1];
@@ -477,4 +471,39 @@ function isSingleton(sys: TabSystem, beat: PlacedBeat): boolean {
 function layoutBg(): string {
   // Glyphs sit on lines; knock the line out with the page background (white).
   return "#ffffff";
+}
+
+/** A quarter rest drawn as a vector path (zig-zag + bottom curl) so it renders
+ *  identically on screen, in PNG, and in PDF. The musical Unicode rest glyph
+ *  (U+1D13D) is avoided because embedded TTFs lack it and svg2pdf mangles it. */
+function restGlyph(cx: number, yc: number, size: number, color: string): ReactElement {
+  const s = size * 1.3;
+  const w = s * 0.4;
+  const top = yc - s / 2;
+  const lw = Math.max(1.4, s * 0.15);
+  const d =
+    `M ${cx - w * 0.35} ${top} ` +
+    `L ${cx + w * 0.5} ${top + s * 0.32} ` +
+    `L ${cx - w * 0.35} ${top + s * 0.54} ` +
+    `L ${cx + w * 0.55} ${top + s * 0.9} ` +
+    `Q ${cx + w * 0.1} ${top + s} ${cx - w * 0.2} ${top + s * 0.92}`;
+  return (
+    <g className="tab-rest">
+      <rect
+        x={cx - w * 0.8}
+        y={yc - s / 2}
+        width={w * 1.6}
+        height={s}
+        fill={layoutBg()}
+      />
+      <path
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeWidth={lw}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </g>
+  );
 }
