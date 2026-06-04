@@ -26,6 +26,17 @@ describe("beaming", () => {
     expect(g[0]).not.toBe(g[4]); // the break lands in the middle of the bar
   });
 
+  it("beams 4/4 sixteenths in groups of four (per beat)", () => {
+    const g = beamGroups("s:" + "e0 ".repeat(16).trim());
+    expect(g).toHaveLength(16);
+    expect(new Set(g).size).toBe(4); // four beam groups of four
+    for (let beat = 0; beat < 4; beat++) {
+      const grp = g.slice(beat * 4, beat * 4 + 4);
+      expect(grp.every((x) => x === grp[0])).toBe(true);
+    }
+    expect(new Set([g[0], g[4], g[8], g[12]]).size).toBe(4); // all distinct
+  });
+
   it("beams 6/8 eighths in groups of three", () => {
     const g = beamGroups("e:e0 e0 e0 e0 e0 e0", { num: 6, den: 8 });
     expect(new Set(g).size).toBe(2);

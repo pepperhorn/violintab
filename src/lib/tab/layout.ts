@@ -15,7 +15,6 @@ export const LAYOUT = {
   BEAT_SCALE: 150,
   BOTTOM_PAD: 56,
   POSITION_ROW_H: 16, // reserved height for the "Nth pos." label row beneath a system
-  NOTE_NAME_ROW_H: 30, // reserved height for the note-name row (up to a double stop)
 } as const;
 
 const ORDINALS = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
@@ -85,6 +84,7 @@ export interface LayoutOptions {
   timeSig: TimeSig;
   showStems: boolean;
   showNoteNames?: boolean;
+  noteNameFontSize?: number;
   /** Hard cap on measures per system; a line still wraps earlier if too wide. */
   barsPerLine?: number;
   title?: string;
@@ -163,7 +163,8 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
   const allBeats = doc.measures.flatMap((m) => m.beats);
   const hasChordLabel = allBeats.some((b) => b.chord?.label);
   const chordRowH = hasChordLabel ? (opts.chordFontSize ?? 13) + 10 : 0;
-  const noteNameRowH = opts.showNoteNames ? LAYOUT.NOTE_NAME_ROW_H : 0;
+  // Reserve room for up to a double stop (two stacked names) when names are shown.
+  const noteNameRowH = opts.showNoteNames ? (opts.noteNameFontSize ?? 10) * 2 + 8 : 0;
   const beamUnit = beamUnitFraction(opts.timeSig);
 
   // Pack measures into systems.
@@ -212,24 +213,27 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
         x += LAYOUT.REPEAT_PAD;
       }
 
-      // Beam grouping within this measure: beam runs of eligible notes, breaking
-      // at each metric beam-unit boundary (and at rests / quarter-or-longer notes).
+      // Beam grouping within this measure: eighths beam by the metric beam unit
+      // (half bar in 4/4), but sixteenths (and shorter) beam by the beat — e.g.
+      // 4/4 sixteenths in groups of 4. Breaks at rests / quarter-or-longer notes.
+      const beatLen = 1 / opts.timeSig.den; // one beat (a quarter in /4 meters)
       let activeGroup: number | null = null;
-      let groupUnit = -1;
+      let groupKey = "";
       let beamPos = 0; // running position in the measure, in whole-note fractions
       const groupForBeat: (number | null)[] = [];
       measure.beats.forEach((b) => {
-        const eligible = !b.isRest && flagsFor(b.duration) > 0;
-        if (!eligible) {
+        const fl = flagsFor(b.duration);
+        if (b.isRest || fl === 0) {
           activeGroup = null;
           groupForBeat.push(null);
           beamPos += beatFraction(b.duration, b.dotted);
           return;
         }
-        const unit = Math.floor(beamPos / beamUnit + 1e-9);
-        if (activeGroup === null || unit !== groupUnit) {
+        const unit = fl >= 2 ? beatLen : beamUnit;
+        const key = `${fl >= 2 ? "s" : "e"}${Math.floor(beamPos / unit + 1e-9)}`;
+        if (activeGroup === null || key !== groupKey) {
           activeGroup = beamGroupSeq++;
-          groupUnit = unit;
+          groupKey = key;
         }
         groupForBeat.push(activeGroup);
         beamPos += beatFraction(b.duration, b.dotted);

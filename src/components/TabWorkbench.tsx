@@ -38,6 +38,7 @@ export function TabWorkbench() {
   const [fontFamily, setFontFamily] = useState("Poppins, sans-serif");
   const [noteFontSize, setNoteFontSize] = useState(13);
   const [positionFontSize, setPositionFontSize] = useState(11);
+  const [noteNameFontSize, setNoteNameFontSize] = useState(10);
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [feel, setFeel] = useState("");
@@ -90,6 +91,7 @@ export function TabWorkbench() {
         timeSig: renderDoc.timeSig,
         showStems,
         showNoteNames,
+        noteNameFontSize,
         barsPerLine,
         title: title.trim() || undefined,
         subtitle: subtitle.trim() || undefined,
@@ -103,8 +105,8 @@ export function TabWorkbench() {
         chordFontSize,
       }),
     [
-      renderDoc, showStems, showNoteNames, previewWidth, barsPerLine, title, subtitle, feel,
-      headerGap, titleSize, subtitleSize, feelSize, keySize, showKey, chordFontSize,
+      renderDoc, showStems, showNoteNames, noteNameFontSize, previewWidth, barsPerLine, title,
+      subtitle, feel, headerGap, titleSize, subtitleSize, feelSize, keySize, showKey, chordFontSize,
     ],
   );
 
@@ -171,6 +173,7 @@ export function TabWorkbench() {
             fontFamily,
             noteFontSize,
             positionFontSize,
+            noteNameFontSize,
             chordFontFamily,
             chordFontSize,
             title,
@@ -190,7 +193,7 @@ export function TabWorkbench() {
       ),
     [
       doc, bpm, barsPerLine, showStems, showNoteNames, fontFamily, noteFontSize, positionFontSize,
-      chordFontFamily, chordFontSize, title, subtitle, feel, showKey, headerGap,
+      noteNameFontSize, chordFontFamily, chordFontSize, title, subtitle, feel, showKey, headerGap,
       titleSize, subtitleSize, feelSize, keySize,
     ],
   );
@@ -318,6 +321,16 @@ export function TabWorkbench() {
                   onChange={(e) => setPositionFontSize(clampSize(e.target.value, 7, 24, 11))}
                 />
               </Label>
+              <Label>
+                <span>Note name size</span>
+                <Input
+                  type="number"
+                  min={7}
+                  max={24}
+                  value={noteNameFontSize}
+                  onChange={(e) => setNoteNameFontSize(clampSize(e.target.value, 7, 24, 10))}
+                />
+              </Label>
               <Label className="col-span-2 md:col-span-1">
                 <span>Chord font</span>
                 <Select value={chordFontFamily} onChange={(e) => setChordFontFamily(e.target.value)}>
@@ -437,6 +450,7 @@ export function TabWorkbench() {
                 chordFontSize={chordFontSize}
                 chordFontFamily={chordFontFamily}
                 positionFontSize={positionFontSize}
+                noteNameFontSize={noteNameFontSize}
               />
             </div>
           </div>

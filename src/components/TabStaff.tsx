@@ -14,6 +14,7 @@ interface TabStaffProps {
   chordFontSize?: number;
   chordFontFamily?: string;
   positionFontSize?: number;
+  noteNameFontSize?: number;
   className?: string;
 }
 
@@ -35,6 +36,7 @@ export function TabStaff({
   chordFontSize = 13,
   chordFontFamily,
   positionFontSize = 11,
+  noteNameFontSize = 10,
   className,
 }: TabStaffProps) {
   const chordFont = chordFontFamily || fontFamily;
@@ -82,6 +84,7 @@ export function TabStaff({
           chordFontSize={chordFontSize}
           chordFont={chordFont}
           positionFontSize={positionFontSize}
+          noteNameFontSize={noteNameFontSize}
         />
       ))}
     </svg>
@@ -100,6 +103,7 @@ function SystemView({
   chordFontSize,
   chordFont,
   positionFontSize,
+  noteNameFontSize,
 }: {
   sys: TabSystem;
   layout: TabLayout;
@@ -112,6 +116,7 @@ function SystemView({
   chordFontSize: number;
   chordFont: string;
   positionFontSize: number;
+  noteNameFontSize: number;
 }) {
   const beamY = stemBaseY + LAYOUT.STEM_LEN;
   return (
@@ -203,7 +208,7 @@ function SystemView({
       {drawPositions(sys, beamY, color, fontFamily, positionFontSize)}
 
       {/* Note names below the staff (toggleable) */}
-      {layout.showNoteNames && drawNoteNames(sys, layout, beamY, color, fontFamily)}
+      {layout.showNoteNames && drawNoteNames(sys, layout, beamY, color, fontFamily, noteNameFontSize)}
 
       {/* Chord symbols in the row above the staff */}
       {layout.chordRowH > 0 && drawChordRow(sys, layout, color, chordFont, chordFontSize)}
@@ -248,10 +253,10 @@ function drawNoteNames(
   beamY: number,
   color: string,
   fontFamily: string,
+  fontSize: number,
 ): ReactElement[] {
   const out: ReactElement[] = [];
   const useFlats = keyUsesFlats(layout.keySig);
-  const fontSize = 10;
   const rowY = beamY + 12 + LAYOUT.POSITION_ROW_H; // below the position-label row
   const step = fontSize + 1;
   for (const beat of sys.beats) {
