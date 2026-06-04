@@ -1,5 +1,7 @@
 # Violin Tab Writer
 
+[![CI](https://github.com/pepperhorn/violintab/actions/workflows/ci.yml/badge.svg)](https://github.com/pepperhorn/violintab/actions/workflows/ci.yml)
+
 Write violin tablature from a compact text shorthand, preview it as clean SVG
 notation, play it back, and export to SVG / PNG / PDF.
 
