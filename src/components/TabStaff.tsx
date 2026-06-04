@@ -1,7 +1,7 @@
 // src/components/TabStaff.tsx
 import type { ReactElement } from "react";
 import { LAYOUT, type PlacedBeat, type TabLayout, type TabSystem } from "@/lib/tab/layout";
-import type { ViolinNote } from "@/lib/tab/types";
+import type { Duration, ViolinNote } from "@/lib/tab/types";
 
 interface TabStaffProps {
   layout: TabLayout;
@@ -394,6 +394,8 @@ function BeatView({
           (sys.lineYs[0] + sys.lineYs[layout.stringCount - 1]) / 2,
           noteFontSize,
           color,
+          beat.duration,
+          beat.dotted,
         )
       ) : (
         beat.notes.map((n, i) => {
@@ -473,37 +475,84 @@ function layoutBg(): string {
   return "#ffffff";
 }
 
-/** A quarter rest drawn as a vector path (zig-zag + bottom curl) so it renders
- *  identically on screen, in PNG, and in PDF. The musical Unicode rest glyph
- *  (U+1D13D) is avoided because embedded TTFs lack it and svg2pdf mangles it. */
-function restGlyph(cx: number, yc: number, size: number, color: string): ReactElement {
-  const s = size * 1.3;
-  const w = s * 0.4;
-  const top = yc - s / 2;
+/** Rests drawn as vector shapes (one per duration) so they render identically
+ *  on screen, in PNG, and in PDF. The musical Unicode rest glyphs are avoided
+ *  because embedded TTFs lack them and svg2pdf mangles the surrogate pairs.
+ *  Triplet rests use the base-duration glyph; dotted rests get an augmentation dot. */
+function restGlyph(
+  cx: number,
+  cy: number,
+  size: number,
+  color: string,
+  duration: Duration,
+  dotted: boolean,
+): ReactElement {
+  const s = size;
+  const g = LAYOUT.LINE_GAP;
+  const base = duration.endsWith("t") ? duration.slice(0, -1) : duration;
   const lw = Math.max(1.4, s * 0.15);
-  const d =
-    `M ${cx - w * 0.35} ${top} ` +
-    `L ${cx + w * 0.5} ${top + s * 0.32} ` +
-    `L ${cx - w * 0.35} ${top + s * 0.54} ` +
-    `L ${cx + w * 0.55} ${top + s * 0.9} ` +
-    `Q ${cx + w * 0.1} ${top + s} ${cx - w * 0.2} ${top + s * 0.92}`;
-  return (
-    <g className="tab-rest">
-      <rect
-        x={cx - w * 0.8}
-        y={yc - s / 2}
-        width={w * 1.6}
-        height={s}
-        fill={layoutBg()}
-      />
-      <path
-        d={d}
-        fill="none"
-        stroke={color}
-        strokeWidth={lw}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </g>
+  const parts: ReactElement[] = [];
+
+  // Knockout so the rest reads cleanly over the staff lines.
+  const koW = s * 1.6;
+  const koH = g + s * 0.7;
+  parts.push(
+    <rect key="ko" x={cx - koW / 2} y={cy - koH / 2} width={koW} height={koH} fill={layoutBg()} />,
   );
+
+  if (base === "w" || base === "h") {
+    // A block on a staff line: whole hangs below the line, half sits above it.
+    const lineRef = cy - g / 2; // the A string line (2nd from top)
+    const w = s * 0.95;
+    const h = g * 0.5;
+    const y = base === "w" ? lineRef : lineRef - h;
+    parts.push(<rect key="bar" x={cx - w / 2} y={y} width={w} height={h} fill={color} />);
+  } else if (base === "q") {
+    // Quarter rest: zig-zag with a bottom curl.
+    const ht = s * 1.3;
+    const w = ht * 0.4;
+    const top = cy - ht / 2;
+    const d =
+      `M ${cx - w * 0.35} ${top} ` +
+      `L ${cx + w * 0.5} ${top + ht * 0.32} ` +
+      `L ${cx - w * 0.35} ${top + ht * 0.54} ` +
+      `L ${cx + w * 0.55} ${top + ht * 0.9} ` +
+      `Q ${cx + w * 0.1} ${top + ht} ${cx - w * 0.2} ${top + ht * 0.92}`;
+    parts.push(
+      <path key="q" d={d} fill="none" stroke={color} strokeWidth={lw}
+        strokeLinecap="round" strokeLinejoin="round" />,
+    );
+  } else {
+    // Eighth (1 flag) / sixteenth (2 flags): a slanted stem with hooked blobs.
+    const flags = base === "s" ? 2 : 1;
+    const flagGap = s * 0.46;
+    const ht = s * 1.2 + (flags - 1) * flagGap;
+    const top = cy - ht / 2;
+    const bottom = cy + ht / 2;
+    const stemTopX = cx + s * 0.26;
+    const stemBotX = cx - s * 0.32;
+    const stemXAt = (y: number) =>
+      stemTopX + ((y - top) / (bottom - top)) * (stemBotX - stemTopX);
+    parts.push(
+      <line key="stem" x1={stemTopX} y1={top} x2={stemBotX} y2={bottom}
+        stroke={color} strokeWidth={lw} strokeLinecap="round" />,
+    );
+    const r = s * 0.16;
+    for (let k = 0; k < flags; k++) {
+      const fy = top + r + k * flagGap;
+      const sx = stemXAt(fy);
+      parts.push(<circle key={`fl${k}`} cx={sx - s * 0.14} cy={fy} r={r} fill={color} />);
+      parts.push(
+        <line key={`fc${k}`} x1={sx} y1={fy + r * 0.25} x2={sx - s * 0.14} y2={fy}
+          stroke={color} strokeWidth={lw * 0.9} strokeLinecap="round" />,
+      );
+    }
+  }
+
+  if (dotted) {
+    const dr = Math.max(1.5, s * 0.13);
+    parts.push(<circle key="dot" cx={cx + s * 0.6} cy={cy} r={dr} fill={color} />);
+  }
+
+  return <g className="tab-rest">{parts}</g>;
 }
