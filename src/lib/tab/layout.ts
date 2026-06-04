@@ -121,6 +121,17 @@ function buildHeader(opts: LayoutOptions, keySig: string): { lines: HeaderLine[]
   return { lines, topPad };
 }
 
+/** Metric beam unit (in fractions of a whole note): beams break at these
+ *  boundaries. Compound meters (6/8, 12/8) group by the dotted beat; 4/4 (and
+ *  2/4) group by the half bar so eighths beam 4+4 with a break at the middle;
+ *  other meters (3/4, …) group by the beat. */
+function beamUnitFraction(ts: TimeSig): number {
+  const beat = 1 / ts.den;
+  if (ts.num % 3 === 0 && ts.num > 3) return 3 * beat; // 6/8, 9/8, 12/8
+  if (ts.den === 4 && ts.num % 2 === 0) return 2 * beat; // 4/4, 2/4 -> half-bar groups
+  return beat;
+}
+
 function flagsFor(duration: Duration): number {
   const base = duration.endsWith("t") ? duration.slice(0, -1) : duration;
   if (base === "e") return 1;
@@ -153,6 +164,7 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
   const hasChordLabel = allBeats.some((b) => b.chord?.label);
   const chordRowH = hasChordLabel ? (opts.chordFontSize ?? 13) + 10 : 0;
   const noteNameRowH = opts.showNoteNames ? LAYOUT.NOTE_NAME_ROW_H : 0;
+  const beamUnit = beamUnitFraction(opts.timeSig);
 
   // Pack measures into systems.
   const maxBars = opts.barsPerLine && opts.barsPerLine > 0 ? opts.barsPerLine : Infinity;
@@ -200,18 +212,27 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
         x += LAYOUT.REPEAT_PAD;
       }
 
-      // Beam grouping within this measure.
+      // Beam grouping within this measure: beam runs of eligible notes, breaking
+      // at each metric beam-unit boundary (and at rests / quarter-or-longer notes).
       let activeGroup: number | null = null;
+      let groupUnit = -1;
+      let beamPos = 0; // running position in the measure, in whole-note fractions
       const groupForBeat: (number | null)[] = [];
       measure.beats.forEach((b) => {
         const eligible = !b.isRest && flagsFor(b.duration) > 0;
         if (!eligible) {
           activeGroup = null;
           groupForBeat.push(null);
+          beamPos += beatFraction(b.duration, b.dotted);
           return;
         }
-        if (activeGroup === null) activeGroup = beamGroupSeq++;
+        const unit = Math.floor(beamPos / beamUnit + 1e-9);
+        if (activeGroup === null || unit !== groupUnit) {
+          activeGroup = beamGroupSeq++;
+          groupUnit = unit;
+        }
         groupForBeat.push(activeGroup);
+        beamPos += beatFraction(b.duration, b.dotted);
       });
 
       // Triplet grouping.

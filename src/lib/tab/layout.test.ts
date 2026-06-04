@@ -1,0 +1,49 @@
+// src/lib/tab/layout.test.ts
+import { describe, expect, it } from "vitest";
+import { layoutTab } from "./layout";
+import { parseTab } from "./parse";
+import type { TimeSig } from "./types";
+
+function beamGroups(text: string, timeSig: TimeSig = { num: 4, den: 4 }) {
+  const doc = parseTab(text, { keySig: "C", timeSig });
+  const layout = layoutTab(doc, {
+    width: 4000,
+    tuning: ["E", "A", "D", "G"],
+    stringCount: 4,
+    timeSig,
+    showStems: true,
+  });
+  return layout.systems.flatMap((s) => s.beats).map((b) => b.beamGroup);
+}
+
+describe("beaming", () => {
+  it("breaks 4/4 eighth-note beams at the half bar (between 2& and 3)", () => {
+    const g = beamGroups("e:e0 e0 e0 e0 e0 e0 e0 e0");
+    expect(g).toHaveLength(8);
+    expect(new Set(g).size).toBe(2); // two beam groups of four
+    expect(g.slice(0, 4).every((x) => x === g[0])).toBe(true);
+    expect(g.slice(4, 8).every((x) => x === g[4])).toBe(true);
+    expect(g[0]).not.toBe(g[4]); // the break lands in the middle of the bar
+  });
+
+  it("beams 6/8 eighths in groups of three", () => {
+    const g = beamGroups("e:e0 e0 e0 e0 e0 e0", { num: 6, den: 8 });
+    expect(new Set(g).size).toBe(2);
+    expect(g.slice(0, 3).every((x) => x === g[0])).toBe(true);
+    expect(g.slice(3, 6).every((x) => x === g[3])).toBe(true);
+  });
+
+  it("beams 3/4 eighths per beat (three groups of two)", () => {
+    const g = beamGroups("e:e0 e0 e0 e0 e0 e0", { num: 3, den: 4 });
+    expect(new Set(g).size).toBe(3);
+  });
+
+  it("breaks a beam at a rest", () => {
+    // Two eighths, a quarter rest, then two more eighths (in the second half bar).
+    const g = beamGroups("e:e0 e0 q:r e:e0 e0");
+    expect(g[0]).toBe(g[1]); // first pair beamed
+    expect(g[2]).toBeNull(); // rest is never beamed
+    expect(g[3]).toBe(g[4]); // second pair beamed together
+    expect(g[0]).not.toBe(g[3]); // and it's a separate beam from the first
+  });
+});
