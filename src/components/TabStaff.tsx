@@ -176,6 +176,9 @@ function SystemView({
       {/* Barlines (single / final / repeat start + end) */}
       {drawBarlines(sys, layout, color, fontFamily)}
 
+      {/* Ties (curved arcs between same-string notes of adjacent beats) */}
+      {drawTies(sys, color, noteFontSize)}
+
       {/* Beats */}
       {sys.beats.map((beat) => (
         <BeatView
@@ -262,6 +265,36 @@ function drawChordRow(
         {beat.chord.label}
       </text>,
     );
+  }
+  return out;
+}
+
+function drawTies(sys: TabSystem, color: string, noteFontSize: number): ReactElement[] {
+  const out: ReactElement[] = [];
+  const gap = noteFontSize * 0.45; // clear the finger glyph on each end
+  for (let k = 0; k < sys.beats.length - 1; k++) {
+    const cur = sys.beats[k];
+    if (!cur.tie) continue;
+    const nxt = sys.beats[k + 1];
+    for (const n of cur.notes) {
+      if (!nxt.notes.some((m) => m.string === n.string)) continue;
+      const y = sys.lineYs[n.string - 1];
+      const x1 = cur.x + gap;
+      const x2 = nxt.x - gap;
+      if (x2 <= x1) continue;
+      const mid = (x1 + x2) / 2;
+      const bow = y - 7; // arc bows upward above the string line
+      out.push(
+        <path
+          key={`tie-${cur.globalBeatIndex}-${n.string}`}
+          className="tab-tie"
+          d={`M ${x1} ${y - 1} Q ${mid} ${bow} ${x2} ${y - 1}`}
+          fill="none"
+          stroke={color}
+          strokeWidth={1.4}
+        />,
+      );
+    }
   }
   return out;
 }

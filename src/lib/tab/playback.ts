@@ -5,33 +5,68 @@ import { VIOLIN } from "./instruments";
 import { noteToMidi } from "./pitch";
 import type { TabDoc } from "./types";
 
+export interface NoteOnset {
+  midi: number;
+  durSec: number; // includes any tied continuation
+}
+
 export interface ScheduledBeat {
   atSec: number;
+  durSec: number; // this beat's own duration (drives the cursor + total length)
+  onsets: NoteOnset[]; // notes that START sounding at this beat
+  globalBeatIndex: number;
+}
+
+interface FlatBeat {
+  atSec: number;
   durSec: number;
-  midis: number[];
+  tie: boolean;
+  notes: { string: number; midi: number }[];
   globalBeatIndex: number;
 }
 
 /** Pure timing math — unit tested. quarter = 60/bpm seconds. Notes whose pitch
- *  can't be resolved (out-of-range finger/position) are silently dropped. */
+ *  can't be resolved (out-of-range finger/position) are dropped. A beat marked
+ *  `tie` sustains each note into the next beat's same-string, same-pitch note:
+ *  the first note sounds for the combined duration and the continuation is not
+ *  re-articulated. */
 export function buildSchedule(doc: TabDoc, bpm: number): ScheduledBeat[] {
   const quarterSec = 60 / bpm;
-  const sched: ScheduledBeat[] = [];
+  const flat: FlatBeat[] = [];
   let t = 0;
   let globalBeatIndex = 0;
   for (const measure of doc.measures) {
     for (const beat of measure.beats) {
       const durSec = beatFraction(beat.duration, beat.dotted) * 4 * quarterSec;
-      const midis = beat.isRest
+      const notes = beat.isRest
         ? []
         : beat.notes
-            .map((n) => noteToMidi(n))
-            .filter((m): m is number => m !== null);
-      sched.push({ atSec: t, durSec, midis, globalBeatIndex: globalBeatIndex++ });
+            .map((n) => ({ string: n.string, midi: noteToMidi(n) }))
+            .filter((n): n is { string: number; midi: number } => n.midi !== null);
+      flat.push({ atSec: t, durSec, tie: Boolean(beat.tie), notes, globalBeatIndex: globalBeatIndex++ });
       t += durSec;
     }
   }
-  return sched;
+
+  const sameNote = (b: FlatBeat, string: number, midi: number) =>
+    b.notes.some((n) => n.string === string && n.midi === midi);
+
+  return flat.map((f, i) => {
+    const onsets: NoteOnset[] = [];
+    for (const n of f.notes) {
+      // Skip a note that is the continuation of a tie from the previous beat.
+      if (i > 0 && flat[i - 1].tie && sameNote(flat[i - 1], n.string, n.midi)) continue;
+      // Follow the tie chain forward, summing durations.
+      let dur = f.durSec;
+      let j = i;
+      while (flat[j].tie && j + 1 < flat.length && sameNote(flat[j + 1], n.string, n.midi)) {
+        dur += flat[j + 1].durSec;
+        j++;
+      }
+      onsets.push({ midi: n.midi, durSec: dur });
+    }
+    return { atSec: f.atSec, durSec: f.durSec, onsets, globalBeatIndex: f.globalBeatIndex };
+  });
 }
 
 export interface TabPlayerHandle {
@@ -60,8 +95,8 @@ export async function createTabPlayer(
   const timers: ReturnType<typeof setTimeout>[] = [];
 
   for (const beat of sched) {
-    for (const midi of beat.midis) {
-      instrument.start({ note: midi, time: start + beat.atSec, duration: beat.durSec });
+    for (const onset of beat.onsets) {
+      instrument.start({ note: onset.midi, time: start + beat.atSec, duration: onset.durSec });
     }
     timers.push(
       setTimeout(() => {

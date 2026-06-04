@@ -35,6 +35,7 @@ Beats reuse the `frames` duration grammar:
 | `q:e1:a2`     | double stop (colon-stacked notes in one beat)      |
 | `r`           | rest                                               |
 | `x`           | repeat the previous beat                           |
+| `~`           | tie the previous beat into the next (sustains)     |
 | `|`           | barline                                            |
 | `|:` … `:|`   | repeat section (`:|x3` adds a play-count)          |
 | `[Am]`        | chord-symbol text above the beat                   |

@@ -145,6 +145,12 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
         }
         continue;
       }
+      // Tie: attaches to the previous beat ("tied into the next beat")
+      if (raw === "~") {
+        if (lastBeat) lastBeat.tie = true;
+        else errors.push({ line: lineNo, message: `tie "~" has no preceding note` });
+        continue;
+      }
       // Repeat previous beat
       if (raw === "x" || raw === "X") {
         if (!lastBeat) {

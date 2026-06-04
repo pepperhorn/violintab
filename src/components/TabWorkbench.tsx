@@ -455,6 +455,7 @@ export function TabWorkbench() {
               <code>eL1</code>/<code>eH1</code> low/high finger · <code>(3)e1</code> position ·{" "}
               <code>q:e1</code> duration · append <code>d</code> dotted, <code>t</code> triplet ·{" "}
               <code>q:e1:a2</code> double stop · <code>r</code> rest · <code>x</code> repeat ·{" "}
+              <code>~</code> tie ·{" "}
               <code>|</code> barline · <code>|:</code> … <code>:|</code> repeat (<code>:|x3</code> count) ·{" "}
               <code>[Am]</code> chord symbol
             </div>

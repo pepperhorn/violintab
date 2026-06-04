@@ -35,6 +35,7 @@ export interface PlacedBeat {
   flags: number; // 0 = quarter or longer, 1 = eighth, 2 = sixteenth
   chord?: ChordAnnotation; // symbol drawn in the chord row above this beat
   posLabel?: string; // "Nth pos." drawn below this beat when the hand position changes
+  tie?: boolean; // tied into the next beat
 }
 
 export type BarlineKind = "single" | "final" | "repeatStart" | "repeatEnd";
@@ -245,6 +246,7 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
           flags: flagsFor(b.duration),
           chord: b.chord,
           posLabel,
+          tie: b.tie,
         });
         x += w;
       });

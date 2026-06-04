@@ -95,6 +95,19 @@ describe("parseTab", () => {
     expect(doc.measures[1].beats[0].notes).toEqual([{ string: 2, finger: 0 }]);
   });
 
+  it("marks a tie on the beat before a ~ token", () => {
+    const doc = parse("q:e1 ~ q:e1");
+    expect(doc.errors).toEqual([]);
+    const beats = doc.measures.flatMap((m) => m.beats);
+    expect(beats[0].tie).toBe(true);
+    expect(beats[1].tie).toBeUndefined();
+  });
+
+  it("errors on a tie with no preceding note", () => {
+    const doc = parse("~ q:e1");
+    expect(doc.errors.some((e) => e.message.includes("no preceding note"))).toBe(true);
+  });
+
   it("records a position on a positioned note", () => {
     const doc = parse("q:(3)e1");
     expect(doc.measures[0].beats[0].notes[0]).toEqual({ string: 1, finger: 1, position: 3 });

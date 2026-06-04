@@ -32,6 +32,7 @@ export interface Beat {
   dotted: boolean;
   isRest: boolean;
   chord?: ChordAnnotation;
+  tie?: boolean; // tied into the next beat (same-string notes sustain across)
 }
 
 export interface Measure {
