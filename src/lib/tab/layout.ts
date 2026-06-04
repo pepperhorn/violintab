@@ -1,0 +1,273 @@
+// src/lib/tab/layout.ts
+import { beatFraction } from "./durations";
+import type { Beat, ChordAnnotation, Duration, Measure, TabDoc, TimeSig, ViolinNote } from "./types";
+
+export const LAYOUT = {
+  LINE_GAP: 14,
+  LEFT_PAD: 60,
+  RIGHT_PAD: 16,
+  TOP_PAD: 32,
+  STEM_LEN: 20,
+  SYSTEM_GAP: 80,
+  MEASURE_PAD: 16,
+  BEAT_MIN_W: 28,
+  BEAT_SCALE: 150,
+  BOTTOM_PAD: 56,
+  POSITION_ROW_H: 16, // reserved height for the "Nth pos." label row beneath a system
+} as const;
+
+const ORDINALS = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
+export function positionLabel(pos: number): string {
+  return `${ORDINALS[pos] ?? `${pos}th`} pos.`;
+}
+
+export interface PlacedBeat {
+  x: number; // center x of the beat slot
+  measureIndex: number;
+  globalBeatIndex: number;
+  notes: ViolinNote[];
+  duration: Duration;
+  dotted: boolean;
+  isRest: boolean;
+  beamGroup: number | null; // shared id for beamed runs; null if not beam-eligible
+  tripletGroup: number | null; // shared id for consecutive triplet beats; null otherwise
+  flags: number; // 0 = quarter or longer, 1 = eighth, 2 = sixteenth
+  chord?: ChordAnnotation; // symbol drawn in the chord row above this beat
+  posLabel?: string; // "Nth pos." drawn below this beat when the hand position changes
+}
+
+export interface PlacedBarline {
+  x: number;
+  final: boolean;
+}
+
+export interface TabSystem {
+  yTop: number;
+  lineYs: number[];
+  lineX0: number;
+  lineX1: number;
+  beats: PlacedBeat[];
+  barlines: PlacedBarline[];
+}
+
+export interface HeaderLine {
+  text: string;
+  y: number;
+  size: number;
+  weight: number;
+  italic?: boolean;
+}
+
+export interface TabLayout {
+  systems: TabSystem[];
+  width: number;
+  height: number;
+  stringCount: number;
+  tuning: string[];
+  timeSig: TimeSig;
+  keySig: string;
+  header: HeaderLine[];
+  chordRowH: number; // vertical space reserved above each system for chord symbols
+  showStems: boolean;
+}
+
+export interface LayoutOptions {
+  width: number;
+  tuning: string[];
+  stringCount: number;
+  timeSig: TimeSig;
+  showStems: boolean;
+  /** Hard cap on measures per system; a line still wraps earlier if too wide. */
+  barsPerLine?: number;
+  title?: string;
+  subtitle?: string;
+  feel?: string;
+  headerGap?: number;
+  titleSize?: number;
+  subtitleSize?: number;
+  feelSize?: number;
+  keySize?: number;
+  showKey?: boolean;
+  chordFontSize?: number;
+}
+
+function buildHeader(opts: LayoutOptions, keySig: string): { lines: HeaderLine[]; topPad: number } {
+  const gap = opts.headerGap ?? 5;
+  const specs: Omit<HeaderLine, "y">[] = [];
+  if (opts.title) specs.push({ text: opts.title, size: opts.titleSize ?? 18, weight: 700 });
+  if (opts.subtitle) specs.push({ text: opts.subtitle, size: opts.subtitleSize ?? 14, weight: 500 });
+  if (opts.feel)
+    specs.push({ text: opts.feel, size: opts.feelSize ?? 12, weight: 500, italic: true });
+  if (opts.showKey !== false)
+    specs.push({ text: `Key: ${keySig}`, size: opts.keySize ?? 12, weight: 600 });
+
+  const hasBlock = Boolean(opts.title || opts.subtitle || opts.feel);
+  const lines: HeaderLine[] = [];
+  let bottom = 6;
+  for (const s of specs) {
+    const y = bottom + s.size / 2;
+    lines.push({ ...s, y });
+    bottom = y + s.size / 2 + gap;
+  }
+  const topPad = hasBlock ? bottom + 6 : LAYOUT.TOP_PAD;
+  return { lines, topPad };
+}
+
+function flagsFor(duration: Duration): number {
+  const base = duration.endsWith("t") ? duration.slice(0, -1) : duration;
+  if (base === "e") return 1;
+  if (base === "s") return 2;
+  return 0;
+}
+
+function beatWidth(beat: Beat): number {
+  const frac = beatFraction(beat.duration, beat.dotted);
+  return LAYOUT.BEAT_MIN_W + frac * LAYOUT.BEAT_SCALE;
+}
+
+function measureWidth(measure: Measure): number {
+  const beats = measure.beats.reduce((sum, b) => sum + beatWidth(b), 0);
+  return beats + LAYOUT.MEASURE_PAD;
+}
+
+/** Representative hand position of a beat: the position of its first note. */
+function beatPosition(beat: Beat): number | null {
+  if (beat.isRest || beat.notes.length === 0) return null;
+  return beat.notes[0].position ?? 1;
+}
+
+export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
+  const avail = opts.width - LAYOUT.LEFT_PAD - LAYOUT.RIGHT_PAD;
+  const staffHeight = (opts.stringCount - 1) * LAYOUT.LINE_GAP;
+  const { lines: header, topPad } = buildHeader(opts, doc.keySig);
+
+  const allBeats = doc.measures.flatMap((m) => m.beats);
+  const hasChordLabel = allBeats.some((b) => b.chord?.label);
+  const chordRowH = hasChordLabel ? (opts.chordFontSize ?? 13) + 10 : 0;
+
+  // Pack measures into systems.
+  const maxBars = opts.barsPerLine && opts.barsPerLine > 0 ? opts.barsPerLine : Infinity;
+  const rows: Measure[][] = [];
+  let row: Measure[] = [];
+  let rowWidth = 0;
+  for (const measure of doc.measures) {
+    const w = measureWidth(measure);
+    const widthWrap = !isFinite(maxBars) && rowWidth + w > avail;
+    if (row.length > 0 && (row.length >= maxBars || widthWrap)) {
+      rows.push(row);
+      row = [];
+      rowWidth = 0;
+    }
+    row.push(measure);
+    rowWidth += w;
+  }
+  if (row.length > 0) rows.push(row);
+
+  const systems: TabSystem[] = [];
+  let globalBeatIndex = 0;
+  let beamGroupSeq = 0;
+  let tripletGroupSeq = 0;
+  const totalMeasures = doc.measures.length;
+  let measureCursor = 0;
+  let prevPosition = 1; // tracks hand-position changes across the whole piece
+
+  rows.forEach((rowMeasures, rowIdx) => {
+    const yTop =
+      topPad +
+      chordRowH +
+      rowIdx * (staffHeight + chordRowH + LAYOUT.POSITION_ROW_H + LAYOUT.SYSTEM_GAP);
+    const lineYs = Array.from({ length: opts.stringCount }, (_, i) => yTop + i * LAYOUT.LINE_GAP);
+
+    const beats: PlacedBeat[] = [];
+    const barlines: PlacedBarline[] = [];
+    let x = LAYOUT.LEFT_PAD;
+
+    rowMeasures.forEach((measure) => {
+      const localMeasureIndex = measureCursor;
+
+      // Beam grouping within this measure.
+      let activeGroup: number | null = null;
+      const groupForBeat: (number | null)[] = [];
+      measure.beats.forEach((b) => {
+        const eligible = !b.isRest && flagsFor(b.duration) > 0;
+        if (!eligible) {
+          activeGroup = null;
+          groupForBeat.push(null);
+          return;
+        }
+        if (activeGroup === null) activeGroup = beamGroupSeq++;
+        groupForBeat.push(activeGroup);
+      });
+
+      // Triplet grouping.
+      let activeTriplet: number | null = null;
+      const tripletForBeat: (number | null)[] = [];
+      measure.beats.forEach((b) => {
+        const isTriplet = b.duration.endsWith("t");
+        if (!isTriplet) {
+          activeTriplet = null;
+          tripletForBeat.push(null);
+          return;
+        }
+        if (activeTriplet === null) activeTriplet = tripletGroupSeq++;
+        tripletForBeat.push(activeTriplet);
+      });
+
+      measure.beats.forEach((b, i) => {
+        const w = beatWidth(b);
+        // Position label: set when the hand position changes (rests carry it over).
+        const pos = beatPosition(b);
+        let posLabel: string | undefined;
+        if (pos !== null && pos !== prevPosition) {
+          posLabel = positionLabel(pos);
+          prevPosition = pos;
+        }
+        beats.push({
+          x: x + w / 2,
+          measureIndex: localMeasureIndex,
+          globalBeatIndex: globalBeatIndex++,
+          notes: b.notes,
+          duration: b.duration,
+          dotted: b.dotted,
+          isRest: b.isRest,
+          beamGroup: groupForBeat[i],
+          tripletGroup: tripletForBeat[i],
+          flags: flagsFor(b.duration),
+          chord: b.chord,
+          posLabel,
+        });
+        x += w;
+      });
+
+      const barX = x + LAYOUT.MEASURE_PAD / 2;
+      barlines.push({ x: barX, final: localMeasureIndex === totalMeasures - 1 });
+      x += LAYOUT.MEASURE_PAD;
+      measureCursor += 1;
+    });
+
+    systems.push({ yTop, lineYs, lineX0: LAYOUT.LEFT_PAD, lineX1: x, beats, barlines });
+  });
+
+  const lastSystem = systems[systems.length - 1];
+  const height =
+    (lastSystem ? lastSystem.yTop + staffHeight : LAYOUT.TOP_PAD) +
+    LAYOUT.STEM_LEN +
+    LAYOUT.POSITION_ROW_H +
+    LAYOUT.BOTTOM_PAD;
+
+  const contentRight = systems.reduce((m, s) => Math.max(m, s.lineX1), 0);
+  const width = Math.max(opts.width, contentRight + LAYOUT.RIGHT_PAD);
+
+  return {
+    systems,
+    width,
+    height,
+    stringCount: opts.stringCount,
+    tuning: opts.tuning,
+    timeSig: opts.timeSig,
+    keySig: doc.keySig,
+    header,
+    chordRowH,
+    showStems: opts.showStems,
+  };
+}

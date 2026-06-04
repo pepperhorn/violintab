@@ -1,0 +1,38 @@
+---
+import { TabWorkbench } from "@/components/TabWorkbench";
+import "@/styles/globals.css";
+
+export const prerender = true;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Violin Tab Writer</title>
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <main class="page-main mx-auto max-w-7xl px-6 py-16">
+      <header class="page-header mb-12 flex flex-col gap-3">
+        <span class="page-eyebrow text-sm font-medium uppercase tracking-widest text-muted-foreground">
+          Creative Ranges Foundation
+        </span>
+        <h1 class="page-title text-5xl font-bold tracking-tight">
+          Violin Tab Writer
+        </h1>
+        <p class="page-subtitle max-w-2xl text-lg text-muted-foreground">
+          Write violin tablature from a compact shorthand — string, finger, and
+          position — then preview, play, and export it as SVG, PNG, or PDF.
+        </p>
+      </header>
+
+      <TabWorkbench client:load />
+
+      <footer class="page-footer mt-16 border-t pt-6 text-sm text-muted-foreground">
+        Built with Astro {Astro.generator.replace("Astro v", "")}.
+      </footer>
+    </main>
+  </body>
+</html>
