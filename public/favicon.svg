@@ -1,13 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="32" cy="32" r="32" fill="#000000"/>
-  <text
-    x="32"
-    y="34"
-    text-anchor="middle"
-    dominant-baseline="central"
-    fill="#ffffff"
-    font-family="Poppins, ui-sans-serif, system-ui, sans-serif"
-    font-weight="700"
-    font-size="42"
-  >G</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Marigold print tile -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#ffc20a" stroke="#17120d" stroke-width="3"/>
+
+  <!-- violin silhouette: scroll + neck + body -->
+  <defs>
+    <g id="violin">
+      <circle cx="32" cy="9.5" r="4.4"/>
+      <rect x="29.4" y="11" width="5.2" height="22" rx="1.4"/>
+      <path d="M32 29 C40 29 44.5 33 44.5 37.5 C44.5 41 38 42 37 44
+               C36 46 44.5 47 46.5 51.5 C46.5 56.5 39.5 58.5 32 58.5
+               C24.5 58.5 17.5 56.5 17.5 51.5 C19.5 47 28 46 27 44
+               C26 42 19.5 41 19.5 37.5 C19.5 33 24 29 32 29 Z"/>
+    </g>
+  </defs>
+
+  <!-- cyan misregistration pass -->
+  <use href="#violin" transform="translate(-1.9 -1.9)" fill="#10c4d8"/>
+  <!-- ink violin -->
+  <use href="#violin" fill="#17120d"/>
+
+  <!-- scroll eye + f-holes punched back to the tile colour -->
+  <circle cx="32" cy="9.5" r="1.5" fill="#ffc20a"/>
+  <path d="M27 45.5 C25.6 46 25.6 48 27 48.6" fill="none" stroke="#ffc20a" stroke-width="1.4" stroke-linecap="round"/>
+  <circle cx="26.4" cy="44.6" r="1" fill="#ffc20a"/>
+  <circle cx="27.4" cy="49.3" r="1" fill="#ffc20a"/>
+  <path d="M37 45.5 C38.4 46 38.4 48 37 48.6" fill="none" stroke="#ffc20a" stroke-width="1.4" stroke-linecap="round"/>
+  <circle cx="37.6" cy="44.6" r="1" fill="#ffc20a"/>
+  <circle cx="36.6" cy="49.3" r="1" fill="#ffc20a"/>
+
+  <!-- strings -->
+  <g stroke="#ffc20a" stroke-width="0.7" opacity="0.9">
+    <line x1="30.4" y1="13" x2="30.4" y2="55"/>
+    <line x1="31.5" y1="13" x2="31.5" y2="55"/>
+    <line x1="32.5" y1="13" x2="32.5" y2="55"/>
+    <line x1="33.6" y1="13" x2="33.6" y2="55"/>
+  </g>
+  <!-- bridge -->
+  <rect x="27.5" y="51.5" width="9" height="2.2" rx="0.6" fill="#ffc20a"/>
 </svg>
