@@ -1,6 +1,6 @@
 // src/lib/tab/pitch.test.ts
 import { describe, expect, it } from "vitest";
-import { NATURAL_FINGER_MIDI, noteToMidi } from "./pitch";
+import { NATURAL_FINGER_MIDI, keyUsesFlats, midiToNoteName, noteToMidi } from "./pitch";
 
 // String indices: 1=E, 2=A, 3=D, 4=G
 const E = 1, A = 2, D = 3, G = 4;
@@ -46,6 +46,22 @@ describe("noteToMidi", () => {
 
   it("returns null for an unsupported position", () => {
     expect(noteToMidi({ string: A, finger: 1, position: 9 })).toBeNull();
+  });
+
+  it("spells note names with sharps by default, flats for flat keys", () => {
+    expect(midiToNoteName(73)).toBe("C#");
+    expect(midiToNoteName(70)).toBe("A#");
+    expect(midiToNoteName(73, true)).toBe("Db");
+    expect(midiToNoteName(70, true)).toBe("Bb");
+    expect(midiToNoteName(76, false, true)).toBe("E5");
+    expect(midiToNoteName(60, false, true)).toBe("C4");
+  });
+
+  it("keyUsesFlats classifies keys", () => {
+    expect(keyUsesFlats("Bb")).toBe(true);
+    expect(keyUsesFlats("Dm")).toBe(true);
+    expect(keyUsesFlats("D")).toBe(false);
+    expect(keyUsesFlats("C")).toBe(false);
   });
 
   it("the lookup table is strictly ascending per row", () => {

@@ -2,6 +2,7 @@
 import type { ReactElement } from "react";
 import { LAYOUT, type PlacedBeat, type TabLayout, type TabSystem } from "@/lib/tab/layout";
 import type { Duration, ViolinNote } from "@/lib/tab/types";
+import { keyUsesFlats, midiToNoteName, noteToMidi } from "@/lib/tab/pitch";
 
 interface TabStaffProps {
   layout: TabLayout;
@@ -201,6 +202,9 @@ function SystemView({
       {/* Position labels ("Nth pos.") beneath the staff */}
       {drawPositions(sys, beamY, color, fontFamily, positionFontSize)}
 
+      {/* Note names below the staff (toggleable) */}
+      {layout.showNoteNames && drawNoteNames(sys, layout, beamY, color, fontFamily)}
+
       {/* Chord symbols in the row above the staff */}
       {layout.chordRowH > 0 && drawChordRow(sys, layout, color, chordFont, chordFontSize)}
     </g>
@@ -234,6 +238,45 @@ function drawPositions(
         {beat.posLabel}
       </text>,
     );
+  }
+  return out;
+}
+
+function drawNoteNames(
+  sys: TabSystem,
+  layout: TabLayout,
+  beamY: number,
+  color: string,
+  fontFamily: string,
+): ReactElement[] {
+  const out: ReactElement[] = [];
+  const useFlats = keyUsesFlats(layout.keySig);
+  const fontSize = 10;
+  const rowY = beamY + 12 + LAYOUT.POSITION_ROW_H; // below the position-label row
+  const step = fontSize + 1;
+  for (const beat of sys.beats) {
+    if (beat.isRest) continue;
+    // Stack a double stop's names top-to-bottom by string (string 1 = top line).
+    const ordered = [...beat.notes].sort((a, b) => a.string - b.string);
+    ordered.forEach((n, i) => {
+      const midi = noteToMidi(n);
+      if (midi === null) return;
+      out.push(
+        <text
+          key={`nn-${beat.globalBeatIndex}-${i}`}
+          className="tab-note-name"
+          x={beat.x}
+          y={rowY + i * step}
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          fill={color}
+          textAnchor="middle"
+          dominantBaseline="central"
+        >
+          {midiToNoteName(midi, useFlats)}
+        </text>,
+      );
+    });
   }
   return out;
 }

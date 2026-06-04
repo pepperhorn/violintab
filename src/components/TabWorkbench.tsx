@@ -34,6 +34,7 @@ export function TabWorkbench() {
   const [bpm, setBpm] = useState(96);
   const [barsPerLine, setBarsPerLine] = useState(4);
   const [showStems, setShowStems] = useState(true);
+  const [showNoteNames, setShowNoteNames] = useState(false);
   const [fontFamily, setFontFamily] = useState("Poppins, sans-serif");
   const [noteFontSize, setNoteFontSize] = useState(13);
   const [positionFontSize, setPositionFontSize] = useState(11);
@@ -88,6 +89,7 @@ export function TabWorkbench() {
         stringCount: renderDoc.stringCount,
         timeSig: renderDoc.timeSig,
         showStems,
+        showNoteNames,
         barsPerLine,
         title: title.trim() || undefined,
         subtitle: subtitle.trim() || undefined,
@@ -101,8 +103,8 @@ export function TabWorkbench() {
         chordFontSize,
       }),
     [
-      renderDoc, showStems, previewWidth, barsPerLine, title, subtitle, feel, headerGap,
-      titleSize, subtitleSize, feelSize, keySize, showKey, chordFontSize,
+      renderDoc, showStems, showNoteNames, previewWidth, barsPerLine, title, subtitle, feel,
+      headerGap, titleSize, subtitleSize, feelSize, keySize, showKey, chordFontSize,
     ],
   );
 
@@ -165,6 +167,7 @@ export function TabWorkbench() {
           barsPerLine,
           style: {
             showStems,
+            showNoteNames,
             fontFamily,
             noteFontSize,
             positionFontSize,
@@ -186,7 +189,7 @@ export function TabWorkbench() {
         2,
       ),
     [
-      doc, bpm, barsPerLine, showStems, fontFamily, noteFontSize, positionFontSize,
+      doc, bpm, barsPerLine, showStems, showNoteNames, fontFamily, noteFontSize, positionFontSize,
       chordFontFamily, chordFontSize, title, subtitle, feel, showKey, headerGap,
       titleSize, subtitleSize, feelSize, keySize,
     ],
@@ -382,6 +385,14 @@ export function TabWorkbench() {
                 onClick={() => setShowKey((v) => !v)}
               >
                 Show key: {showKey ? "on" : "off"}
+              </Button>
+              <Button
+                className="note-names-toggle"
+                variant={showNoteNames ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowNoteNames((v) => !v)}
+              >
+                Note names: {showNoteNames ? "on" : "off"}
               </Button>
             </div>
           </CardContent>

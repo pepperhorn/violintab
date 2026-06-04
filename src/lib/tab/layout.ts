@@ -15,6 +15,7 @@ export const LAYOUT = {
   BEAT_SCALE: 150,
   BOTTOM_PAD: 56,
   POSITION_ROW_H: 16, // reserved height for the "Nth pos." label row beneath a system
+  NOTE_NAME_ROW_H: 30, // reserved height for the note-name row (up to a double stop)
 } as const;
 
 const ORDINALS = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
@@ -74,6 +75,7 @@ export interface TabLayout {
   header: HeaderLine[];
   chordRowH: number; // vertical space reserved above each system for chord symbols
   showStems: boolean;
+  showNoteNames: boolean;
 }
 
 export interface LayoutOptions {
@@ -82,6 +84,7 @@ export interface LayoutOptions {
   stringCount: number;
   timeSig: TimeSig;
   showStems: boolean;
+  showNoteNames?: boolean;
   /** Hard cap on measures per system; a line still wraps earlier if too wide. */
   barsPerLine?: number;
   title?: string;
@@ -149,6 +152,7 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
   const allBeats = doc.measures.flatMap((m) => m.beats);
   const hasChordLabel = allBeats.some((b) => b.chord?.label);
   const chordRowH = hasChordLabel ? (opts.chordFontSize ?? 13) + 10 : 0;
+  const noteNameRowH = opts.showNoteNames ? LAYOUT.NOTE_NAME_ROW_H : 0;
 
   // Pack measures into systems.
   const maxBars = opts.barsPerLine && opts.barsPerLine > 0 ? opts.barsPerLine : Infinity;
@@ -180,7 +184,7 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
     const yTop =
       topPad +
       chordRowH +
-      rowIdx * (staffHeight + chordRowH + LAYOUT.POSITION_ROW_H + LAYOUT.SYSTEM_GAP);
+      rowIdx * (staffHeight + chordRowH + LAYOUT.POSITION_ROW_H + noteNameRowH + LAYOUT.SYSTEM_GAP);
     const lineYs = Array.from({ length: opts.stringCount }, (_, i) => yTop + i * LAYOUT.LINE_GAP);
 
     const beats: PlacedBeat[] = [];
@@ -270,6 +274,7 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
     (lastSystem ? lastSystem.yTop + staffHeight : LAYOUT.TOP_PAD) +
     LAYOUT.STEM_LEN +
     LAYOUT.POSITION_ROW_H +
+    noteNameRowH +
     LAYOUT.BOTTOM_PAD;
 
   const contentRight = systems.reduce((m, s) => Math.max(m, s.lineX1), 0);
@@ -286,5 +291,6 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
     header,
     chordRowH,
     showStems: opts.showStems,
+    showNoteNames: Boolean(opts.showNoteNames),
   };
 }

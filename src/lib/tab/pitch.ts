@@ -48,3 +48,24 @@ export function noteToMidi(note: ViolinNote): number | null {
 export function midiToFreq(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
+
+const SHARP_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const FLAT_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+
+// Keys spelled with flats (majors + minors). Everything else uses sharps.
+const FLAT_KEYS = new Set([
+  "F", "Bb", "Eb", "Ab", "Db", "Gb", "Cb",
+  "Dm", "Gm", "Cm", "Fm", "Bbm", "Ebm", "Abm",
+]);
+
+export function keyUsesFlats(keySig: string): boolean {
+  return FLAT_KEYS.has(keySig.trim());
+}
+
+/** Spell a MIDI pitch as a note name (ASCII accidentals: "F#", "Bb"). Octave is
+ *  appended only when `withOctave` is set. Sharp/flat spelling follows the key. */
+export function midiToNoteName(midi: number, useFlats = false, withOctave = false): string {
+  const pc = ((midi % 12) + 12) % 12;
+  const name = (useFlats ? FLAT_NAMES : SHARP_NAMES)[pc];
+  return withOctave ? `${name}${Math.floor(midi / 12) - 1}` : name;
+}
