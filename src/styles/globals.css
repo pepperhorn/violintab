@@ -309,3 +309,20 @@
   letter-spacing: 0.12em;
   color: var(--ink);
 }
+.footer-link {
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--pop-yellow);
+  border: 2px solid var(--ink);
+  border-radius: 5px;
+  padding: 1px 6px;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.12s ease;
+}
+.footer-link:hover {
+  background: var(--pop-pink);
+  color: #fffdf4;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
