@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { LAYOUT, type PlacedBeat, type TabLayout, type TabSystem } from "@/lib/tab/layout";
 import type { Duration, ViolinNote } from "@/lib/tab/types";
 import { keyUsesFlats, midiToNoteName, noteToMidi } from "@/lib/tab/pitch";
+import { getInstrument } from "@/lib/tab/instruments";
 
 interface TabStaffProps {
   layout: TabLayout;
@@ -257,6 +258,7 @@ function drawNoteNames(
 ): ReactElement[] {
   const out: ReactElement[] = [];
   const useFlats = keyUsesFlats(layout.keySig);
+  const instrument = getInstrument(layout.instrument);
   const rowY = beamY + 12 + LAYOUT.POSITION_ROW_H; // below the position-label row
   const step = fontSize + 1;
   for (const beat of sys.beats) {
@@ -264,7 +266,7 @@ function drawNoteNames(
     // Stack a double stop's names top-to-bottom by string (string 1 = top line).
     const ordered = [...beat.notes].sort((a, b) => a.string - b.string);
     ordered.forEach((n, i) => {
-      const midi = noteToMidi(n);
+      const midi = noteToMidi(n, instrument);
       if (midi === null) return;
       out.push(
         <text

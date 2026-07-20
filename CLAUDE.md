@@ -33,18 +33,28 @@ The pipeline is a one-way data flow, all under `src/lib/tab/`:
    glyphs with line-knockout boxes, stems/beams/flags, triplet brackets,
    position labels, chord symbols). Pure presentational component.
 4. **`playback.ts`** — `buildSchedule` (pure, unit-tested timing math) +
-   `createTabPlayer` (loads the `violin` MusyngKite soundfont via `smplr`,
-   schedules notes on the AudioContext clock, drives the cursor highlight).
+   `createTabPlayer` (loads the doc's instrument MusyngKite soundfont via `smplr`,
+   schedules notes on the AudioContext clock, drives the cursor highlight). Both
+   resolve the instrument from `doc.instrument`.
 
 Supporting modules:
 
 - **`types.ts`** — the shared data model (`ViolinNote`, `Beat`, `Measure`,
-  `TabDoc`, `Duration`, `FingerLevel`). String index 1 = E (top), 4 = G (bottom).
-- **`instruments.ts`** — the single `VIOLIN` config: tuning `E A D G`, open MIDI
-  `[76, 69, 62, 55]`, soundfont patch `violin`.
-- **`pitch.ts`** — `noteToMidi` resolves a note to MIDI via `NATURAL_FINGER_MIDI`,
-  a literal `[string][position] -> [f1,f2,f3,f4]` lookup, with `L`/`H` as ∓1
-  semitone and open strings ignoring position/level. See "Pitch model" below.
+  `TabDoc`, `Duration`, `FingerLevel`, `Instrument`, `InstrumentId`). String index
+  1 = top (violin E / cello A), 4 = bottom (violin G / cello C). `TabDoc.instrument`
+  records which instrument the tab is written for.
+- **`instruments.ts`** — the `Instrument` configs (`VIOLIN`, `CELLO`) plus the
+  `INSTRUMENTS` registry and `getInstrument(id)`. Each carries tuning, open MIDI,
+  soundfont patch, `maxPosition`, and its own `naturalFingerMidi` fingering chart.
+  The violin chart is complete; the **cello chart is intentionally empty** (a stub),
+  so cello fingered notes resolve to null (silent) and only open strings sound until
+  the chart is filled in. `stringIndexFromLetter(letter, instrument)` and the pitch
+  helpers all default to `VIOLIN` for backward compatibility.
+- **`pitch.ts`** — `noteToMidi(note, instrument = VIOLIN)` resolves a note to MIDI
+  via `instrument.naturalFingerMidi`, a literal `[string][position] -> [f1,f2,f3,f4]`
+  lookup, with `L`/`H` as ∓1 semitone and open strings ignoring position/level.
+  `NATURAL_FINGER_MIDI` / `MAX_POSITION` are re-exported as violin aliases. See
+  "Pitch model" below.
 - **`durations.ts`** — duration fractions + `parseDurationToken` (shared,
   unchanged from `frames`).
 
@@ -58,10 +68,19 @@ serializes the live SVG to SVG/PNG and embeds TTFs for faithful PDF output.
 A violin finger number is **not** a fixed pitch (no frets). The mapping is a
 literal lookup table reconstructed from a standard fingering chart, not a
 formula — within each position the half/whole-step pattern differs per string.
-`NATURAL_FINGER_MIDI` in `pitch.ts` is the source of truth; each row is strictly
-ascending and `pitch.test.ts` guards that invariant plus known anchor notes.
-When changing pitch behavior, update the table and the spec table together:
-`docs/superpowers/specs/2026-06-04-violin-tab-writer-design.md` §4.
+The chart lives on the instrument config in `instruments.ts` (`VIOLIN_FINGER_MIDI`,
+re-exported from `pitch.ts` as `NATURAL_FINGER_MIDI`) and is the source of truth;
+each row is strictly ascending and `pitch.test.ts` guards that invariant plus
+known anchor notes. When changing violin pitch behavior, update the table and the
+spec table together: `docs/superpowers/specs/2026-06-04-violin-tab-writer-design.md` §4.
+
+**Cello is stubbed.** `CELLO` exists as a full instrument config (tuning `A D G C`,
+open MIDI `[57, 50, 43, 36]`, patch `cello`) and is selectable in the UI, but its
+`naturalFingerMidi` chart is deliberately empty — cello fingering is *not* a
+transpose of the violin chart (lower positions span a whole tone across fingers
+1–4, plus half/thumb positions), so it needs its own literal chart. Until then
+cello open strings sound and fingered notes resolve to null (silent). Filling in
+`CELLO_FINGER_MIDI` is the remaining work to make cello fully playable.
 
 ## Conventions
 

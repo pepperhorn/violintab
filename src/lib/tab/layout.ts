@@ -1,6 +1,6 @@
 // src/lib/tab/layout.ts
 import { beatFraction } from "./durations";
-import type { Beat, ChordAnnotation, Duration, Measure, TabDoc, TimeSig, ViolinNote } from "./types";
+import type { Beat, ChordAnnotation, Duration, InstrumentId, Measure, TabDoc, TimeSig, ViolinNote } from "./types";
 
 export const LAYOUT = {
   LINE_GAP: 14,
@@ -67,6 +67,7 @@ export interface TabLayout {
   systems: TabSystem[];
   width: number;
   height: number;
+  instrument: InstrumentId;
   stringCount: number;
   tuning: string[];
   timeSig: TimeSig;
@@ -309,6 +310,7 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
     systems,
     width,
     height,
+    instrument: doc.instrument,
     stringCount: opts.stringCount,
     tuning: opts.tuning,
     timeSig: opts.timeSig,

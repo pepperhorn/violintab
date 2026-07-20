@@ -1,12 +1,12 @@
 // src/lib/tab/parse.ts
 import { beatFraction, measureCapacity, parseDurationToken } from "./durations";
-import { STRING_COUNT, VIOLIN, stringIndexFromLetter } from "./instruments";
-import { MAX_POSITION } from "./pitch";
+import { VIOLIN, stringIndexFromLetter } from "./instruments";
 import type {
   Beat,
   ChordAnnotation,
   Duration,
   FingerLevel,
+  Instrument,
   Measure,
   ParseError,
   TabDoc,
@@ -17,28 +17,33 @@ import type {
 export interface ParseOptions {
   keySig: string;
   timeSig: TimeSig;
+  /** Instrument to parse against (string letters, position range, tuning).
+   *  Defaults to the violin. */
+  instrument?: Instrument;
 }
 
 const EPS = 1e-9;
 
 /** A single note token: `(P)?<string><L|H>?<finger>`, e.g. `e0`, `aH2`, `(3)e1`.
- *  Case-insensitive on the string letter and the L/H level. */
-const NOTE_RE = /^(?:\((\d+)\))?([eadg])([lh])?([0-4])$/i;
+ *  The string letter (any of a-g) is validated against the instrument's tuning
+ *  in parseNote. Case-insensitive on the string letter and the L/H level. */
+const NOTE_RE = /^(?:\((\d+)\))?([a-g])([lh])?([0-4])$/i;
 
-/** Parse one note segment. Returns the note, a specific error, or null when the
- *  text isn't a note token at all (so the caller can report "couldn't read"). */
-export function parseNote(seg: string): ViolinNote | { error: string } | null {
+/** Parse one note segment for the given instrument (violin by default). Returns
+ *  the note, a specific error, or null when the text isn't a note token for this
+ *  instrument at all (so the caller can report "couldn't read"). */
+export function parseNote(seg: string, instrument: Instrument = VIOLIN): ViolinNote | { error: string } | null {
   const m = NOTE_RE.exec(seg);
   if (!m) return null;
 
   const position = m[1] ? Number(m[1]) : 1;
-  const string = stringIndexFromLetter(m[2]);
+  const string = stringIndexFromLetter(m[2], instrument);
   const level = m[3] ? (m[3].toUpperCase() as FingerLevel) : undefined;
   const finger = Number(m[4]);
 
-  if (string === null) return null; // unreachable given the regex, kept for safety
-  if (position < 1 || position > MAX_POSITION) {
-    return { error: `position ${position} out of range (1-${MAX_POSITION}) in "${seg}"` };
+  if (string === null) return null; // letter isn't one of this instrument's strings
+  if (position < 1 || position > instrument.maxPosition) {
+    return { error: `position ${position} out of range (1-${instrument.maxPosition}) in "${seg}"` };
   }
   if (finger === 0 && level) {
     return { error: `open string can't take a low/high fingering in "${seg}"` };
@@ -73,6 +78,7 @@ export function parseBarToken(raw: string): BarToken | null {
 }
 
 export function parseTab(text: string, opts: ParseOptions): TabDoc {
+  const instrument = opts.instrument ?? VIOLIN;
   const capacity = measureCapacity(opts.timeSig);
 
   const measures: Measure[] = [];
@@ -186,7 +192,7 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
       const notes: ViolinNote[] = [];
       let ok = true;
       for (const seg of rest) {
-        const res = parseNote(seg);
+        const res = parseNote(seg, instrument);
         if (res === null) {
           errors.push({ line: lineNo, message: `couldn't read "${raw}"` });
           ok = false;
@@ -211,10 +217,11 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
   }
 
   return {
-    tuning: [...VIOLIN.tuning],
+    instrument: instrument.id,
+    tuning: [...instrument.tuning],
     keySig: opts.keySig,
     timeSig: opts.timeSig,
-    stringCount: STRING_COUNT,
+    stringCount: instrument.tuning.length,
     measures,
     errors,
   };

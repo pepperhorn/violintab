@@ -1,6 +1,7 @@
 // src/lib/tab/pitch.test.ts
 import { describe, expect, it } from "vitest";
 import { NATURAL_FINGER_MIDI, keyUsesFlats, midiToNoteName, noteToMidi } from "./pitch";
+import { CELLO, VIOLIN } from "./instruments";
 
 // String indices: 1=E, 2=A, 3=D, 4=G
 const E = 1, A = 2, D = 3, G = 4;
@@ -64,6 +65,10 @@ describe("noteToMidi", () => {
     expect(keyUsesFlats("C")).toBe(false);
   });
 
+  it("defaults to the violin when no instrument is passed", () => {
+    expect(noteToMidi({ string: A, finger: 1 })).toBe(noteToMidi({ string: A, finger: 1 }, VIOLIN));
+  });
+
   it("the lookup table is strictly ascending per row", () => {
     for (const str of Object.keys(NATURAL_FINGER_MIDI) as (keyof typeof NATURAL_FINGER_MIDI)[]) {
       for (const pos of Object.keys(NATURAL_FINGER_MIDI[str])) {
@@ -73,5 +78,24 @@ describe("noteToMidi", () => {
         }
       }
     }
+  });
+});
+
+describe("noteToMidi on the cello", () => {
+  // Cello string indices: 1=A, 2=D, 3=G, 4=C.
+  const cA = 1, cD = 2, cG = 3, cC = 4;
+
+  it("open strings sound the open pitch (A3 D3 G2 C2)", () => {
+    expect(noteToMidi({ string: cA, finger: 0 }, CELLO)).toBe(57);
+    expect(noteToMidi({ string: cD, finger: 0 }, CELLO)).toBe(50);
+    expect(noteToMidi({ string: cG, finger: 0 }, CELLO)).toBe(43);
+    expect(noteToMidi({ string: cC, finger: 0 }, CELLO)).toBe(36);
+  });
+
+  it("fingered notes are unresolved until the chart is filled in (returns null)", () => {
+    // The cello fingering chart is intentionally empty for now.
+    expect(noteToMidi({ string: cA, finger: 1 }, CELLO)).toBeNull();
+    expect(noteToMidi({ string: cC, finger: 3, position: 2 }, CELLO)).toBeNull();
+    expect(CELLO.naturalFingerMidi).toEqual({});
   });
 });
