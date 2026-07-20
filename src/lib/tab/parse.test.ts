@@ -1,6 +1,7 @@
 // src/lib/tab/parse.test.ts
 import { describe, expect, it } from "vitest";
 import { parseBarToken, parseNote, parseTab } from "./parse";
+import { CELLO } from "./instruments";
 import type { TimeSig } from "./types";
 
 const TS: TimeSig = { num: 4, den: 4 };
@@ -44,6 +45,40 @@ describe("parseNote", () => {
     expect(parseNote("zz")).toBeNull();
     expect(parseNote("e5")).toBeNull(); // finger 5 not allowed
     expect(parseNote("q")).toBeNull();
+    expect(parseNote("b1")).toBeNull(); // b isn't a violin string letter
+  });
+});
+
+describe("parseNote on the cello", () => {
+  it("reads the cello's own string letters (a d g c)", () => {
+    expect(parseNote("c1", CELLO)).toEqual({ string: 4, finger: 1 });
+    expect(parseNote("g0", CELLO)).toEqual({ string: 3, finger: 0 });
+    expect(parseNote("a2", CELLO)).toEqual({ string: 1, finger: 2 });
+  });
+
+  it("rejects the violin-only E string", () => {
+    expect(parseNote("e1", CELLO)).toBeNull();
+  });
+
+  it("accepts higher positions than the violin allows", () => {
+    // Cello maxPosition is 7; position 7 is in range for cello, out of range for violin.
+    expect(parseNote("(7)c1", CELLO)).toEqual({ string: 4, finger: 1, position: 7 });
+    expect(parseNote("(7)e1")).toEqual({ error: expect.stringContaining("out of range") });
+  });
+});
+
+describe("parseTab on the cello", () => {
+  it("stamps the instrument, tuning and string count onto the doc", () => {
+    const doc = parseTab("q:c0 q:g1 q:d2 q:a3", { keySig: "C", timeSig: TS, instrument: CELLO });
+    expect(doc.errors).toEqual([]);
+    expect(doc.instrument).toBe("cello");
+    expect(doc.tuning).toEqual(["A", "D", "G", "C"]);
+    expect(doc.stringCount).toBe(4);
+    expect(doc.measures[0].beats[0].notes).toEqual([{ string: 4, finger: 0 }]);
+  });
+
+  it("defaults to the violin instrument when none is given", () => {
+    expect(parse("q:e0").instrument).toBe("violin");
   });
 });
 

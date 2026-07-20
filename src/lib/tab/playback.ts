@@ -1,7 +1,7 @@
 // src/lib/tab/playback.ts
 import { Soundfont } from "smplr";
 import { beatFraction } from "./durations";
-import { VIOLIN } from "./instruments";
+import { getInstrument } from "./instruments";
 import { noteToMidi } from "./pitch";
 import type { TabDoc } from "./types";
 
@@ -31,6 +31,7 @@ interface FlatBeat {
  *  the first note sounds for the combined duration and the continuation is not
  *  re-articulated. */
 export function buildSchedule(doc: TabDoc, bpm: number): ScheduledBeat[] {
+  const instrument = getInstrument(doc.instrument);
   const quarterSec = 60 / bpm;
   const flat: FlatBeat[] = [];
   let t = 0;
@@ -41,7 +42,7 @@ export function buildSchedule(doc: TabDoc, bpm: number): ScheduledBeat[] {
       const notes = beat.isRest
         ? []
         : beat.notes
-            .map((n) => ({ string: n.string, midi: noteToMidi(n) }))
+            .map((n) => ({ string: n.string, midi: noteToMidi(n, instrument) }))
             .filter((n): n is { string: number; midi: number } => n.midi !== null);
       flat.push({ atSec: t, durSec, tie: Boolean(beat.tie), notes, globalBeatIndex: globalBeatIndex++ });
       t += durSec;
@@ -74,7 +75,7 @@ export interface TabPlayerHandle {
 }
 
 /**
- * Load the violin soundfont, schedule every beat against the AudioContext clock,
+ * Load the doc's instrument soundfont, schedule every beat against the AudioContext clock,
  * and drive an onCursor callback for the moving highlight. Must be called from a
  * user gesture (Play click) so the AudioContext can start.
  */
@@ -86,7 +87,7 @@ export async function createTabPlayer(
   const context = new AudioContext();
   await context.resume();
 
-  const instrument = Soundfont(context, { instrument: VIOLIN.patch });
+  const instrument = Soundfont(context, { instrument: getInstrument(doc.instrument).patch });
   await instrument.load;
 
   const sched = buildSchedule(doc, bpm);

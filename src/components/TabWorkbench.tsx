@@ -9,7 +9,8 @@ import { Select } from "./ui/select";
 import { parseTab } from "@/lib/tab/parse";
 import { layoutTab } from "@/lib/tab/layout";
 import { createTabPlayer, type TabPlayerHandle } from "@/lib/tab/playback";
-import type { TabDoc } from "@/lib/tab/types";
+import { INSTRUMENTS, getInstrument } from "@/lib/tab/instruments";
+import type { InstrumentId, TabDoc } from "@/lib/tab/types";
 import { FONT_OPTIONS } from "@/lib/fontOptions";
 import {
   downloadPngFromContainer,
@@ -24,11 +25,19 @@ const MINOR_KEYS = ["Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m", "Bbm", "Fm", "
 const TIME_SIGS = ["4/4", "3/4", "2/4", "6/8", "12/8"];
 const BARS_PER_LINE = [1, 2, 3, 4, 5, 6, 8];
 
-const SAMPLE = `[D] q:d0 e:d1 d2 q:e0 q:eH1 | h:(3)e1 q:(3)e2 (3)e3
-q:a0:e0 e:a1 a3 q:aL2 q:r | h:g0 q:g1 g3`;
+/** Starter tab per instrument, keyed by id so a flip can swap the untouched
+ *  default. Each uses only that instrument's string letters (violin e a d g,
+ *  cello a d g c). */
+const SAMPLES: Record<InstrumentId, string> = {
+  violin: `[D] q:d0 e:d1 d2 q:e0 q:eH1 | h:(3)e1 q:(3)e2 (3)e3
+q:a0:e0 e:a1 a3 q:aL2 q:r | h:g0 q:g1 g3`,
+  cello: `[C] q:g0 e:g1 g2 q:d0 q:dH1 | h:(3)d1 q:(3)d2 (3)d3
+q:a0:d0 e:a1 a3 q:aL2 q:r | h:c0 q:c1 c3`,
+};
 
 export function TabWorkbench() {
-  const [text, setText] = useState(SAMPLE);
+  const [instrumentId, setInstrumentId] = useState<InstrumentId>("violin");
+  const [text, setText] = useState(SAMPLES.violin);
   const [keySig, setKeySig] = useState("D");
   const [timeSigStr, setTimeSigStr] = useState("4/4");
   const [bpm, setBpm] = useState(96);
@@ -62,7 +71,20 @@ export function TabWorkbench() {
     return { num, den };
   }, [timeSigStr]);
 
-  const doc = useMemo(() => parseTab(text, { keySig, timeSig }), [text, keySig, timeSig]);
+  const instrument = useMemo(() => getInstrument(instrumentId), [instrumentId]);
+
+  // Flip instruments; if the editor still holds the outgoing instrument's
+  // untouched sample, swap in the new instrument's sample so the flip is visible.
+  const selectInstrument = (id: InstrumentId) => {
+    if (id === instrumentId) return;
+    setText((t) => (t === SAMPLES[instrumentId] ? SAMPLES[id] : t));
+    setInstrumentId(id);
+  };
+
+  const doc = useMemo(
+    () => parseTab(text, { keySig, timeSig, instrument }),
+    [text, keySig, timeSig, instrument],
+  );
 
   // Keep the last DOC that parsed cleanly so the preview never blanks on a typo.
   const lastGoodDoc = useRef<TabDoc | null>(null);
@@ -144,7 +166,7 @@ export function TabWorkbench() {
     };
   }, []);
 
-  const filename = (ext: string) => safeFilename([title.trim() || "violin-tab"], ext);
+  const filename = (ext: string) => safeFilename([title.trim() || `${instrument.id}-tab`], ext);
   const downloadSvg = () => downloadSvgFromContainer(previewRef.current, filename("svg"));
   const downloadPng = () =>
     downloadPngFromContainer(previewRef.current, filename("png"), { backgroundColor: "#ffffff" });
@@ -161,6 +183,7 @@ export function TabWorkbench() {
     () =>
       JSON.stringify(
         {
+          instrument: doc.instrument,
           tuning: doc.tuning,
           stringCount: doc.stringCount,
           keySig: doc.keySig,
@@ -216,6 +239,11 @@ export function TabWorkbench() {
   const clampSize = (v: string, lo: number, hi: number, fallback: number) =>
     Math.min(hi, Math.max(lo, Number(v) || fallback));
 
+  // String letters for the help text follow the active instrument.
+  const strLetters = instrument.tuning.map((s) => s.toLowerCase());
+  const s1 = strLetters[0]; // top string (violin e, cello a)
+  const s2 = strLetters[1]; // second string (violin a, cello d)
+
   return (
     <div className="tab-workbench flex flex-col gap-6">
       <Card className="tab-setup-card">
@@ -267,6 +295,20 @@ export function TabWorkbench() {
             </Label>
           </div>
           <div className="toggles flex flex-wrap gap-2 items-center pt-2 border-t">
+            <div className="instrument-toggle flex gap-1 items-center mr-2">
+              <span className="instrument-label text-sm text-muted-foreground mr-1">Instrument</span>
+              {(Object.keys(INSTRUMENTS) as InstrumentId[]).map((id) => (
+                <Button
+                  key={id}
+                  className={`instrument-${id}-btn`}
+                  variant={instrumentId === id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => selectInstrument(id)}
+                >
+                  {INSTRUMENTS[id].label}
+                </Button>
+              ))}
+            </div>
             <Button
               variant={showStems ? "default" : "outline"}
               size="sm"
@@ -476,10 +518,10 @@ export function TabWorkbench() {
             </div>
           ) : (
             <div className="tab-help text-xs text-muted-foreground">
-              note <code>e1</code> = string + finger (<code>e a d g</code>, finger <code>0–4</code>) ·{" "}
-              <code>eL1</code>/<code>eH1</code> low/high finger · <code>(3)e1</code> position ·{" "}
-              <code>q:e1</code> duration · append <code>d</code> dotted, <code>t</code> triplet ·{" "}
-              <code>q:e1:a2</code> double stop · <code>r</code> rest · <code>x</code> repeat ·{" "}
+              note <code>{s1}1</code> = string + finger (<code>{strLetters.join(" ")}</code>, finger <code>0–4</code>) ·{" "}
+              <code>{s1}L1</code>/<code>{s1}H1</code> low/high finger · <code>(3){s1}1</code> position ·{" "}
+              <code>q:{s1}1</code> duration · append <code>d</code> dotted, <code>t</code> triplet ·{" "}
+              <code>q:{s1}1:{s2}2</code> double stop · <code>r</code> rest · <code>x</code> repeat ·{" "}
               <code>~</code> tie ·{" "}
               <code>|</code> barline · <code>|:</code> … <code>:|</code> repeat (<code>:|x3</code> count) ·{" "}
               <code>[Am]</code> chord symbol
