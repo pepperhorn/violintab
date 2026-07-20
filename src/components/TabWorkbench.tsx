@@ -148,15 +148,21 @@ export function TabWorkbench() {
     stop();
     const gen = playGenRef.current;
     setPlaying(true);
-    const player = await createTabPlayer(doc, bpm, {
-      onCursor: (i) => setCursorIndex(i),
-      onEnd: () => stop(),
-    });
-    if (gen !== playGenRef.current) {
-      player.stop();
-      return;
+    try {
+      const player = await createTabPlayer(doc, bpm, {
+        onCursor: (i) => setCursorIndex(i),
+        onEnd: () => stop(),
+      });
+      if (gen !== playGenRef.current) {
+        player.stop();
+        return;
+      }
+      playerRef.current = player;
+    } catch {
+      // Soundfont failed to load (e.g. offline / unknown patch) — reset the
+      // transport so the Play button doesn't stick in the "playing" state.
+      if (gen === playGenRef.current) stop();
     }
-    playerRef.current = player;
   };
 
   useEffect(() => {
