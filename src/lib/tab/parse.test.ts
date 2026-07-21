@@ -185,6 +185,15 @@ describe("parseTab", () => {
     expect(positions).toEqual([undefined, undefined]);
   });
 
+  it("does not advance the sticky position when a beat fails to parse", () => {
+    // The middle beat carries an explicit (4) but a bad segment drops it; the
+    // trailing bare note must NOT inherit the discarded beat's position.
+    const doc = parse("q:e1 q:(4)e1:zz q:e2");
+    expect(doc.errors).toHaveLength(1);
+    const positions = doc.measures[0].beats.map((b) => b.notes[0].position);
+    expect(positions).toEqual([undefined, undefined]); // both stay in first position
+  });
+
   it("reports an error for an unreadable token", () => {
     const doc = parse("q:zz");
     expect(doc.errors).toHaveLength(1);

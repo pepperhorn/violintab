@@ -205,6 +205,9 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
       // Note / double-stop beat
       const notes: ViolinNote[] = [];
       let ok = true;
+      // Resolve the sticky position into a local so a beat that fails to parse
+      // (a later segment errors) never advances the running hand position.
+      let beatPosition = curPosition;
       for (const seg of rest) {
         const res = parseNote(seg, instrument);
         if (res === null) {
@@ -220,13 +223,14 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
         // Sticky position: an explicit `(P)` sets the running hand position;
         // a bare note inherits it (default 1st position until first set).
         if (res.position !== undefined) {
-          curPosition = res.position;
-        } else if (curPosition !== 1) {
-          res.position = curPosition;
+          beatPosition = res.position;
+        } else if (beatPosition !== 1) {
+          res.position = beatPosition;
         }
         notes.push(res);
       }
       if (!ok) continue;
+      curPosition = beatPosition; // commit only for a fully-valid beat
       pushBeat({ notes, duration: curDuration, dotted: curDotted, isRest: false });
     }
   });

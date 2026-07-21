@@ -36,4 +36,14 @@ describe("toShorthand", () => {
     const back = parseTab(toShorthand(doc.measures), { keySig: "D", timeSig: { num: 4, den: 4 } });
     expect(back.measures).toEqual(doc.measures);
   });
+
+  it("emits a reset marker when dropping to a lower position (sticky-safe)", () => {
+    // A run in 3rd position returning to 1st: the 1st-position note must re-emit
+    // its position or the sticky parser would keep it in 3rd (wrong pitch).
+    const ts = { num: 4, den: 4 } as const;
+    const doc = parseTab("q:(3)a1 q:(1)a1 q:a2", { keySig: "C", timeSig: ts });
+    const back = parseTab(toShorthand(doc.measures), { keySig: "C", timeSig: ts });
+    expect(back.measures).toEqual(doc.measures);
+    expect(toShorthand(doc.measures)).toContain("(1)"); // the drop-back is explicit
+  });
 });
