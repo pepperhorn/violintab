@@ -20,9 +20,9 @@ describe("noteToMidi", () => {
 
   it("natural fingers on the A string, 1st position", () => {
     expect(noteToMidi({ string: A, finger: 1 })).toBe(71); // B4
-    expect(noteToMidi({ string: A, finger: 2 })).toBe(73); // C#5
-    expect(noteToMidi({ string: A, finger: 3 })).toBe(75); // D#5
-    expect(noteToMidi({ string: A, finger: 4 })).toBe(77); // F5
+    expect(noteToMidi({ string: A, finger: 2 })).toBe(73); // C#5 (high 2)
+    expect(noteToMidi({ string: A, finger: 3 })).toBe(74); // D5
+    expect(noteToMidi({ string: A, finger: 4 })).toBe(76); // E5
   });
 
   it("low/high fingerings shift a semitone", () => {
@@ -42,7 +42,7 @@ describe("noteToMidi", () => {
     expect(noteToMidi({ string: A, finger: 1, position: 3 })).toBe(74); // D5
     expect(noteToMidi({ string: A, finger: 4, position: 3 })).toBe(79); // G5
     expect(noteToMidi({ string: E, finger: 1, position: 1 })).toBe(78); // F#5
-    expect(noteToMidi({ string: G, finger: 4, position: 5 })).toBe(69); // A4
+    expect(noteToMidi({ string: G, finger: 4, position: 4 })).toBe(67); // G4
   });
 
   it("returns null for an unsupported position", () => {
@@ -92,10 +92,36 @@ describe("noteToMidi on the cello", () => {
     expect(noteToMidi({ string: cC, finger: 0 }, CELLO)).toBe(36);
   });
 
-  it("fingered notes are unresolved until the chart is filled in (returns null)", () => {
-    // The cello fingering chart is intentionally empty for now.
-    expect(noteToMidi({ string: cA, finger: 1 }, CELLO)).toBeNull();
-    expect(noteToMidi({ string: cC, finger: 3, position: 2 }, CELLO)).toBeNull();
-    expect(CELLO.naturalFingerMidi).toEqual({});
+  it("resolves fingered notes from the cello fingering chart", () => {
+    // C string, 1st position: 1=D2 (38), 3=E2 (40), 4=F2 (41)
+    expect(noteToMidi({ string: cC, finger: 1 }, CELLO)).toBe(38);
+    expect(noteToMidi({ string: cC, finger: 3 }, CELLO)).toBe(40);
+    expect(noteToMidi({ string: cC, finger: 4 }, CELLO)).toBe(41);
+    // A string, 1st position: 1=B3 (59), 4=D4 (62)
+    expect(noteToMidi({ string: cA, finger: 1 }, CELLO)).toBe(59);
+    expect(noteToMidi({ string: cA, finger: 4 }, CELLO)).toBe(62);
+    // higher position: D string, 3rd position, 4th finger = B3 (59)
+    expect(noteToMidi({ string: cD, finger: 4, position: 3 }, CELLO)).toBe(59);
+  });
+
+  it("L/H shift a cello finger a semitone", () => {
+    // C string 1st-position 1st finger: natural D2 (38), low Db2 (37), high Eb2 (39)
+    expect(noteToMidi({ string: cC, finger: 1, level: "L" }, CELLO)).toBe(37);
+    expect(noteToMidi({ string: cC, finger: 1, level: "H" }, CELLO)).toBe(39);
+  });
+
+  it("returns null beyond the charted range (positions 1-4)", () => {
+    expect(noteToMidi({ string: cA, finger: 4, position: 5 }, CELLO)).toBeNull();
+  });
+
+  it("the cello chart is strictly ascending per row", () => {
+    for (const str of Object.keys(CELLO.naturalFingerMidi)) {
+      for (const pos of Object.keys(CELLO.naturalFingerMidi[str])) {
+        const row = CELLO.naturalFingerMidi[str][Number(pos)];
+        for (let i = 1; i < row.length; i++) {
+          expect(row[i]).toBeGreaterThan(row[i - 1]);
+        }
+      }
+    }
   });
 });

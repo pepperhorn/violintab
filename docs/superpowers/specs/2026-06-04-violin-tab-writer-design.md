@@ -41,7 +41,7 @@ A **note token** has the form:
 | string   | `e a d g`     | which string. E = top staff line, G = bottom.                 |
 | finger   | `0`–`4`       | finger number; `0` = open string. This is the printed glyph.  |
 | `L`/`H`  | optional      | low / high fingering. Printed as `L1`, `H1`, etc.             |
-| `(P)`    | optional      | position (`(2)`, `(3)`, …); default 1. Drives the position label. |
+| `(P)`    | optional      | position (`(2)`, `(3)`, …); sticky (inherited until the next `(P)`), default 1. Drives the position label. |
 
 The remaining syntax is **identical to `frames`** and its parser machinery is
 reused verbatim:
@@ -61,7 +61,11 @@ A full beat token is therefore `«duration»:«note»[:«note»…]`, e.g.
 
 ### Position semantics
 `(P)` attaches to the note it prefixes; both notes of a double stop may carry
-their own `(P)` (normally the same). A **"Nth pos."** label (`"2nd pos."`,
+their own `(P)` (normally the same). **Position is sticky/inherited:** a note
+without an explicit `(P)` prefix inherits the last explicitly-set position,
+carrying across beats, measures, and lines until the next `(P)`. The default at
+the start of a piece is 1st position, and an explicit `(1)` resets back to first
+position. A **"Nth pos."** label (`"2nd pos."`,
 `"3rd pos."`, …) is drawn beneath the **first note that enters a new position**
 — i.e. whenever a note's position differs from the previous note's position.
 Position 1 is the default and is not labelled.
@@ -93,7 +97,7 @@ finger 1..4, level 'H' -> NATURAL[string][position][finger] + 1
 
 `H1` and `L2` denote the same column in the source chart; both resolve through
 the formula above (e.g. on the A string `aH1` = B♭… and `aL2` = C − 1 = B♭ when
-the fingers are a whole step apart). Positions 1–5 are supported; position 1 is
+the fingers are a whole step apart). Positions 1–4 are supported; position 1 is
 the default.
 
 **`NATURAL[string][position]` = `[finger1, finger2, finger3, finger4]` (MIDI).**
@@ -104,14 +108,10 @@ finger-column note in the source chart and is strictly ascending per row.
 const OPEN_MIDI = { G: 55, D: 62, A: 69, E: 76 }; // G3 D4 A4 E5
 
 const NATURAL = {
-  G: { 1: [57, 59, 61, 63], 2: [59, 60, 62, 64], 3: [60, 62, 64, 65],
-       4: [62, 64, 65, 67], 5: [64, 65, 67, 69] },
-  D: { 1: [64, 66, 68, 70], 2: [65, 67, 69, 71], 3: [67, 69, 71, 72],
-       4: [69, 71, 72, 74], 5: [71, 72, 74, 76] },
-  A: { 1: [71, 73, 75, 77], 2: [72, 74, 76, 77], 3: [74, 76, 77, 79],
-       4: [76, 77, 79, 81], 5: [77, 79, 81, 83] },
-  E: { 1: [78, 80, 82, 84], 2: [79, 81, 83, 84], 3: [81, 83, 84, 86],
-       4: [83, 84, 86, 88], 5: [84, 86, 88, 89] },
+  G: { 1: [57, 59, 60, 62], 2: [58, 60, 62, 64], 3: [60, 62, 64, 65], 4: [62, 64, 66, 67] },
+  D: { 1: [64, 66, 67, 69], 2: [65, 67, 69, 71], 3: [67, 69, 71, 72], 4: [69, 71, 72, 74] },
+  A: { 1: [71, 73, 74, 76], 2: [72, 74, 76, 77], 3: [74, 76, 77, 79], 4: [76, 77, 79, 81] },
+  E: { 1: [78, 80, 81, 83], 2: [79, 81, 83, 85], 3: [81, 83, 85, 86], 4: [83, 85, 86, 88] },
 };
 ```
 
@@ -119,26 +119,22 @@ const NATURAL = {
 
 | String (open) | Pos | finger 1 | finger 2 | finger 3 | finger 4 |
 |---------------|-----|----------|----------|----------|----------|
-| G (G3) | 1 | A3  | B3  | C♯4 | D♯4 |
-| G (G3) | 2 | B3  | C4  | D4  | E4  |
+| G (G3) | 1 | A3  | B3  | C4  | D4  |
+| G (G3) | 2 | B♭3 | C4  | D4  | E4  |
 | G (G3) | 3 | C4  | D4  | E4  | F4  |
-| G (G3) | 4 | D4  | E4  | F4  | G4  |
-| G (G3) | 5 | E4  | F4  | G4  | A4  |
-| D (D4) | 1 | E4  | F♯4 | G♯4 | A♯4 |
+| G (G3) | 4 | D4  | E4  | F♯4 | G4  |
+| D (D4) | 1 | E4  | F♯4 | G4  | A4  |
 | D (D4) | 2 | F4  | G4  | A4  | B4  |
 | D (D4) | 3 | G4  | A4  | B4  | C5  |
 | D (D4) | 4 | A4  | B4  | C5  | D5  |
-| D (D4) | 5 | B4  | C5  | D5  | E5  |
-| A (A4) | 1 | B4  | C♯5 | D♯5 | F5  |
+| A (A4) | 1 | B4  | C♯5 | D5  | E5  |
 | A (A4) | 2 | C5  | D5  | E5  | F5  |
 | A (A4) | 3 | D5  | E5  | F5  | G5  |
 | A (A4) | 4 | E5  | F5  | G5  | A5  |
-| A (A4) | 5 | F5  | G5  | A5  | B5  |
-| E (E5) | 1 | F♯5 | G♯5 | A♯5 | C6  |
-| E (E5) | 2 | G5  | A5  | B5  | C6  |
-| E (E5) | 3 | A5  | B5  | C6  | D6  |
-| E (E5) | 4 | B5  | C6  | D6  | E6  |
-| E (E5) | 5 | C6  | D6  | E6  | F6  |
+| E (E5) | 1 | F♯5 | G♯5 | A5  | B5  |
+| E (E5) | 2 | G5  | A5  | B5  | C♯6 |
+| E (E5) | 3 | A5  | B5  | C♯6 | D6  |
+| E (E5) | 4 | B5  | C♯6 | D6  | E6  |
 
 **Worked checks (A string, open = A4 = 69):**
 
@@ -149,7 +145,7 @@ const NATURAL = {
 | `aL1`   | 71      | −1    | 70   | B♭4  |
 | `a2`    | 73      | —     | 73   | C♯5  |
 | `aL2`   | 73      | −1    | 72   | C5   |
-| `a4`    | 77      | —     | 77   | F5   |
+| `a4`    | 76      | —     | 76   | E5   |
 | `(3)a1` | 74      | —     | 74   | D5   |
 | `(3)a4` | 79      | —     | 79   | G5   |
 

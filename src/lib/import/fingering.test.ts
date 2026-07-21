@@ -53,12 +53,14 @@ describe("assignFingering", () => {
     expect(note && noteToMidi(note, VIOLIN)).toBe(76);
   });
 
-  it("returns null for an unsolvable pitch (empty cello chart, fingered note)", () => {
+  it("resolves in-range cello pitches and returns null beyond the charted range", () => {
     const idx = buildPlacementIndex(CELLO);
-    const cAopen = noteToMidi({ string: 1, finger: 0 }, CELLO); // 57
+    const cAopen = noteToMidi({ string: 1, finger: 0 }, CELLO); // 57 (open A)
     expect(assignFingering(cAopen!, START, idx).note).toEqual({ string: 1, finger: 0 });
-    // a fingered cello pitch (e.g. 60 = C4) has no placement
-    expect(assignFingering(60, START, idx).note).toBeNull();
+    // C4 (60) is reachable now that the chart is filled (e.g. D string, 4th position)
+    expect(assignFingering(60, START, idx).note).not.toBeNull();
+    // a pitch well above the cello's charted range has no placement
+    expect(assignFingering(84, START, idx).note).toBeNull(); // C6
   });
 
   it("returns null when excludeStrings covers the only reachable string", () => {
