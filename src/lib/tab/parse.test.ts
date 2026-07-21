@@ -187,11 +187,26 @@ describe("parseTab", () => {
     expect(doc.measures[1].repeatStart).toBe(true);
     expect(doc.measures[1].repeatEnd).toBe(true);
   });
+
+  it("marks a double barline on the measure it closes", () => {
+    const doc = parse("q:e0 q:e1 q:e2 q:e3 || q:a0 a1 a2 a3");
+    expect(doc.errors).toEqual([]);
+    expect(doc.measures[0].doubleBarline).toBe(true);
+    expect(doc.measures[1].doubleBarline).toBeUndefined();
+  });
+
+  it("attaches a double barline placed right after a plain barline to the previous measure", () => {
+    const doc = parse("q:e0 q:e1 q:e2 q:e3 | ||");
+    expect(doc.errors).toEqual([]);
+    expect(doc.measures).toHaveLength(1);
+    expect(doc.measures[0].doubleBarline).toBe(true);
+  });
 });
 
 describe("parseBarToken", () => {
   it("recognises the barline and repeat tokens", () => {
     expect(parseBarToken("|")).toEqual({});
+    expect(parseBarToken("||")).toEqual({ double: true });
     expect(parseBarToken("|:")).toEqual({ start: true });
     expect(parseBarToken(":|")).toEqual({ end: true, count: undefined });
     expect(parseBarToken(":|:")).toEqual({ start: true, end: true });

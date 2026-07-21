@@ -186,6 +186,7 @@ mis-numbered file from producing wrong tab silently.
 | `<rest/>` | `r` |
 | `<tie type="start"/>` | trailing `~` |
 | `<measure>` boundary | `|` |
+| `<barline><bar-style>light-light` | `||` (double barline) |
 | `<barline><repeat>` | `|:` / `:|` (`:|x3`) |
 | `<key><fifths>` + `<mode>` | keySig (`"D"`, `"Bb"`, `"Am"`) |
 | `<time><beats>/<beat-type>` | timeSig (`"4/4"`) |

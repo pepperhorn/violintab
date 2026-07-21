@@ -529,7 +529,7 @@ export function TabWorkbench() {
               <code>q:{s1}1</code> duration · append <code>d</code> dotted, <code>t</code> triplet ·{" "}
               <code>q:{s1}1:{s2}2</code> double stop · <code>r</code> rest · <code>x</code> repeat ·{" "}
               <code>~</code> tie ·{" "}
-              <code>|</code> barline · <code>|:</code> … <code>:|</code> repeat (<code>:|x3</code> count) ·{" "}
+              <code>|</code> barline · <code>||</code> double barline · <code>|:</code> … <code>:|</code> repeat (<code>:|x3</code> count) ·{" "}
               <code>[Am]</code> chord symbol
             </div>
           )}
