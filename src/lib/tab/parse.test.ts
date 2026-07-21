@@ -29,8 +29,12 @@ describe("parseNote", () => {
     expect(parseNote("(2)aH2")).toEqual({ string: 2, finger: 2, level: "H", position: 2 });
   });
 
-  it("omits position when it is the default (1)", () => {
-    expect(parseNote("(1)e1")).toEqual({ string: 1, finger: 1 });
+  it("records an explicit (1) so it can reset a sticky position", () => {
+    expect(parseNote("(1)e1")).toEqual({ string: 1, finger: 1, position: 1 });
+  });
+
+  it("omits position on a bare note (inherits at parseTab level)", () => {
+    expect(parseNote("e1")).toEqual({ string: 1, finger: 1 });
   });
 
   it("rejects a level on an open string", () => {
@@ -38,6 +42,8 @@ describe("parseNote", () => {
   });
 
   it("rejects an out-of-range position", () => {
+    expect(parseNote("(4)e1")).toEqual({ string: 1, finger: 1, position: 4 }); // max
+    expect(parseNote("(5)e1")).toEqual({ error: expect.stringContaining("out of range") });
     expect(parseNote("(9)e1")).toEqual({ error: expect.stringContaining("out of range") });
   });
 
@@ -60,10 +66,9 @@ describe("parseNote on the cello", () => {
     expect(parseNote("e1", CELLO)).toBeNull();
   });
 
-  it("accepts higher positions than the violin allows", () => {
-    // Cello maxPosition is 7; position 7 is in range for cello, out of range for violin.
-    expect(parseNote("(7)c1", CELLO)).toEqual({ string: 4, finger: 1, position: 7 });
-    expect(parseNote("(7)e1")).toEqual({ error: expect.stringContaining("out of range") });
+  it("supports the charted positions and rejects those beyond them (1-4)", () => {
+    expect(parseNote("(4)c1", CELLO)).toEqual({ string: 4, finger: 1, position: 4 });
+    expect(parseNote("(5)c1", CELLO)).toEqual({ error: expect.stringContaining("out of range") });
   });
 });
 
@@ -146,6 +151,47 @@ describe("parseTab", () => {
   it("records a position on a positioned note", () => {
     const doc = parse("q:(3)e1");
     expect(doc.measures[0].beats[0].notes[0]).toEqual({ string: 1, finger: 1, position: 3 });
+  });
+
+  it("inherits a set position across later bare notes (sticky)", () => {
+    const doc = parse("q:(3)e1 q:e2 q:e1");
+    const positions = doc.measures[0].beats.map((b) => b.notes[0].position);
+    expect(positions).toEqual([3, 3, 3]);
+  });
+
+  it("keeps the sticky position across barlines", () => {
+    const doc = parse("q:(3)e1 q:e2 q:e3 q:e4 | q:e1 q:e2 q:e3 q:e4");
+    const first = doc.measures[0].beats.map((b) => b.notes[0].position);
+    const second = doc.measures[1].beats.map((b) => b.notes[0].position);
+    expect(first).toEqual([3, 3, 3, 3]);
+    expect(second).toEqual([3, 3, 3, 3]);
+  });
+
+  it("an explicit (1) resets a sticky position back to first", () => {
+    const doc = parse("q:(3)e1 q:e2 q:(1)e1 q:e2");
+    const positions = doc.measures[0].beats.map((b) => b.notes[0].position);
+    expect(positions).toEqual([3, 3, 1, undefined]);
+  });
+
+  it("shifts the sticky position again on a new (P)", () => {
+    const doc = parse("q:(2)e1 q:(4)e1 q:e2");
+    const positions = doc.measures[0].beats.map((b) => b.notes[0].position);
+    expect(positions).toEqual([2, 4, 4]);
+  });
+
+  it("defaults to first position (no position field) until one is set", () => {
+    const doc = parse("q:e1 q:e2");
+    const positions = doc.measures[0].beats.map((b) => b.notes[0].position);
+    expect(positions).toEqual([undefined, undefined]);
+  });
+
+  it("does not advance the sticky position when a beat fails to parse", () => {
+    // The middle beat carries an explicit (4) but a bad segment drops it; the
+    // trailing bare note must NOT inherit the discarded beat's position.
+    const doc = parse("q:e1 q:(4)e1:zz q:e2");
+    expect(doc.errors).toHaveLength(1);
+    const positions = doc.measures[0].beats.map((b) => b.notes[0].position);
+    expect(positions).toEqual([undefined, undefined]); // both stay in first position
   });
 
   it("reports an error for an unreadable token", () => {

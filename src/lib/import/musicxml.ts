@@ -84,8 +84,7 @@ export function importMusicXml(
 
   if (unfingered > 0) {
     warnings.push(
-      `${unfingered} note(s) could not be fingered for ${instrument.label}` +
-        (instrumentId === "cello" ? " — the cello fingering chart is not yet filled in." : "."),
+      `${unfingered} note(s) fell outside ${instrument.label}'s supported range (positions 1-${instrument.maxPosition}) and were left as rests.`,
     );
   }
   if (droppedChord > 0) {

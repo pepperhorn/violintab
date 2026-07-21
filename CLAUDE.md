@@ -46,10 +46,10 @@ Supporting modules:
 - **`instruments.ts`** — the `Instrument` configs (`VIOLIN`, `CELLO`) plus the
   `INSTRUMENTS` registry and `getInstrument(id)`. Each carries tuning, open MIDI,
   soundfont patch, `maxPosition`, and its own `naturalFingerMidi` fingering chart.
-  The violin chart is complete; the **cello chart is intentionally empty** (a stub),
-  so cello fingered notes resolve to null (silent) and only open strings sound until
-  the chart is filled in. `stringIndexFromLetter(letter, instrument)` and the pitch
-  helpers all default to `VIOLIN` for backward compatibility.
+  Both the violin and cello charts are filled in (`VIOLIN_FINGER_MIDI` positions
+  1–4, `CELLO_FINGER_MIDI` positions 1–4); a pitch outside a chart's range resolves
+  to null. `stringIndexFromLetter(letter, instrument)` and the pitch helpers all
+  default to `VIOLIN` for backward compatibility.
 - **`pitch.ts`** — `noteToMidi(note, instrument = VIOLIN)` resolves a note to MIDI
   via `instrument.naturalFingerMidi`, a literal `[string][position] -> [f1,f2,f3,f4]`
   lookup, with `L`/`H` as ∓1 semitone and open strings ignoring position/level.
@@ -74,13 +74,13 @@ each row is strictly ascending and `pitch.test.ts` guards that invariant plus
 known anchor notes. When changing violin pitch behavior, update the table and the
 spec table together: `docs/superpowers/specs/2026-06-04-violin-tab-writer-design.md` §4.
 
-**Cello is stubbed.** `CELLO` exists as a full instrument config (tuning `A D G C`,
-open MIDI `[57, 50, 43, 36]`, patch `cello`) and is selectable in the UI, but its
-`naturalFingerMidi` chart is deliberately empty — cello fingering is *not* a
-transpose of the violin chart (lower positions span a whole tone across fingers
-1–4, plus half/thumb positions), so it needs its own literal chart. Until then
-cello open strings sound and fingered notes resolve to null (silent). Filling in
-`CELLO_FINGER_MIDI` is the remaining work to make cello fully playable.
+**Cello.** `CELLO` is a full instrument config (tuning `A D G C`, open MIDI
+`[57, 50, 43, 36]`, patch `cello`) with its own `CELLO_FINGER_MIDI` chart. Cello
+fingering is *not* a transpose of the violin chart: the closed neck-position hand
+spans a minor third, so adjacent fingers sit a semitone apart. Positions 1–4 are
+charted; half positions and thumb position are future work, so pitches above the
+charted range (roughly G4) resolve to null. Playback and MusicXML import both work
+for in-range cello notes.
 
 ## Conventions
 

@@ -51,7 +51,11 @@ export function parseNote(seg: string, instrument: Instrument = VIOLIN): ViolinN
 
   const note: ViolinNote = { string, finger };
   if (level) note.level = level;
-  if (position > 1) note.position = position;
+  // Record the position only when it was written explicitly (`(P)`), so callers
+  // can distinguish an explicit setting — including an explicit `(1)` reset —
+  // from a note that should inherit the running hand position. parseTab resolves
+  // the inherited value; a bare note keeps `position` undefined here.
+  if (m[1]) note.position = position;
   return note;
 }
 
@@ -91,6 +95,7 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
   let curDuration: Duration = "q";
   let curDotted = false;
   let lastBeat: Beat | null = null;
+  let curPosition = 1; // running hand position; sticky until the next explicit `(P)`
   let pendingChord: ChordAnnotation | null = null;
   let pendingChordLine = 0;
   let pendingRepeatStart = false;
@@ -200,6 +205,9 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
       // Note / double-stop beat
       const notes: ViolinNote[] = [];
       let ok = true;
+      // Resolve the sticky position into a local so a beat that fails to parse
+      // (a later segment errors) never advances the running hand position.
+      let beatPosition = curPosition;
       for (const seg of rest) {
         const res = parseNote(seg, instrument);
         if (res === null) {
@@ -212,9 +220,17 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
           ok = false;
           break;
         }
+        // Sticky position: an explicit `(P)` sets the running hand position;
+        // a bare note inherits it (default 1st position until first set).
+        if (res.position !== undefined) {
+          beatPosition = res.position;
+        } else if (beatPosition !== 1) {
+          res.position = beatPosition;
+        }
         notes.push(res);
       }
       if (!ok) continue;
+      curPosition = beatPosition; // commit only for a fully-valid beat
       pushBeat({ notes, duration: curDuration, dotted: curDotted, isRest: false });
     }
   });
