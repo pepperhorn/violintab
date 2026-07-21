@@ -1,4 +1,3 @@
-import { VIOLIN } from "@/lib/tab/instruments";
 import { noteToMidi } from "@/lib/tab/pitch";
 import type { Instrument, ViolinNote } from "@/lib/tab/types";
 import type { NormNote } from "./types";
@@ -62,6 +61,7 @@ export function assignFingering(
   carried: Carried,
   index: Map<number, Placement[]>,
   embed?: NormNote["embed"],
+  excludeStrings?: Set<number>,
 ): { note: ViolinNote | null; carried: Carried } {
   let candidates = index.get(midi) ?? [];
   if (candidates.length === 0) return { note: null, carried };
@@ -74,6 +74,11 @@ export function assignFingering(
     const byFinger = candidates.filter((p) => p.note.finger === embed.finger);
     if (byFinger.length) candidates = byFinger;
   }
+  if (excludeStrings && excludeStrings.size) {
+    const free = candidates.filter((p) => !excludeStrings.has(p.string));
+    if (free.length) candidates = free;
+    else return { note: null, carried }; // no free string for this double stop
+  }
 
   let best = candidates[0];
   let bestScore = score(best, carried);
@@ -83,5 +88,3 @@ export function assignFingering(
   }
   return { note: { ...best.note }, carried: { position: best.position, string: best.string } };
 }
-
-export const DEFAULT_INDEX = buildPlacementIndex(VIOLIN);

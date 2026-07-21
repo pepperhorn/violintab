@@ -39,6 +39,7 @@ export function importMusicXml(
 
   let carried: Carried = { position: 1, string: 1 };
   let unfingered = 0;
+  let droppedChord = 0;
 
   const measures: Measure[] = score.measures.map((nm) => {
     const beats: Beat[] = [];
@@ -48,22 +49,30 @@ export function importMusicXml(
         continue;
       }
       const midi = n.pitchMidi;
-      let placement = midi === undefined ? { note: null, carried } : assignFingering(midi, carried, index, n.embed);
-      carried = placement.carried;
 
-      if (!placement.note) {
-        unfingered++;
-        // Chord continuation with no placement is dropped; a lead note becomes a rest.
-        if (!n.chord) beats.push({ notes: [], duration: duration(n), dotted: n.dots > 0, isRest: true });
+      if (n.chord && beats.length) {
+        // Double stop on the previous beat: keep it off strings already in use,
+        // and do not move the melodic hand position.
+        const lead = beats[beats.length - 1];
+        const occupied = new Set(lead.notes.map((nn) => nn.string));
+        const p = midi === undefined
+          ? { note: null, carried }
+          : assignFingering(midi, carried, index, n.embed, occupied);
+        if (p.note) lead.notes.push(p.note);
+        else droppedChord++;
         continue;
       }
-      if (n.chord && beats.length) {
-        beats[beats.length - 1].notes.push(placement.note); // double stop on the previous beat
-      } else {
-        const beat: Beat = { notes: [placement.note], duration: duration(n), dotted: n.dots > 0, isRest: false };
-        if (n.tieStart) beat.tie = true;
-        beats.push(beat);
+
+      const p = midi === undefined ? { note: null, carried } : assignFingering(midi, carried, index, n.embed);
+      carried = p.carried;
+      if (!p.note) {
+        unfingered++;
+        beats.push({ notes: [], duration: duration(n), dotted: n.dots > 0, isRest: true });
+        continue;
       }
+      const beat: Beat = { notes: [p.note], duration: duration(n), dotted: n.dots > 0, isRest: false };
+      if (n.tieStart) beat.tie = true;
+      beats.push(beat);
     }
     const m: Measure = { beats, forcedBarline: true };
     if (nm.repeatStart) m.repeatStart = true;
@@ -79,6 +88,9 @@ export function importMusicXml(
         (instrumentId === "cello" ? " — the cello fingering chart is not yet filled in." : "."),
     );
   }
+  if (droppedChord > 0) {
+    warnings.push(`${droppedChord} double-stop note(s) could not be placed on a free string and were dropped.`);
+  }
 
   return {
     text: toShorthand(measures, [...instrument.tuning]),
@@ -86,6 +98,6 @@ export function importMusicXml(
     keySig: keyName(score.header.keyFifths, score.header.keyMode),
     timeSig: `${score.header.beats}/${score.header.beatType}`,
     tempo: score.header.tempo ?? 96,
-    warnings,
+    warnings: [...new Set(warnings)],
   };
 }

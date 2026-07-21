@@ -60,4 +60,25 @@ describe("assignFingering", () => {
     // a fingered cello pitch (e.g. 60 = C4) has no placement
     expect(assignFingering(60, START, idx).note).toBeNull();
   });
+
+  it("returns null when excludeStrings covers the only reachable string", () => {
+    const idx = vio();
+    // open G (55) is only reachable on string 4
+    const { note } = assignFingering(55, START, idx, undefined, new Set([4]));
+    expect(note).toBeNull();
+  });
+
+  it("picks a different string when the default choice is excluded", () => {
+    const idx = vio();
+    // B4 (71) is reachable on string 2 (A, pos1 finger1) and string 3 (D, pos2 finger4);
+    // starting carried at {position:1, string:2} the solver would normally pick string 2.
+    const carried: Carried = { position: 1, string: 2 };
+    const unexcluded = assignFingering(71, carried, idx);
+    expect(unexcluded.note?.string).toBe(2);
+
+    const excluded = assignFingering(71, carried, idx, undefined, new Set([2]));
+    expect(excluded.note).not.toBeNull();
+    expect(excluded.note?.string).toBe(3);
+    expect(noteToMidi(excluded.note!, VIOLIN)).toBe(71);
+  });
 });

@@ -88,6 +88,8 @@ export function parseDocument(bytes: Uint8Array | string): NormalizedScore | { e
   };
   let headerSeen = false;
   const measures: NormMeasure[] = [];
+  let firstVoice: string | undefined;
+  let sawExtraVoice = false;
 
   for (const measure of arr((parts[0] as Record<string, unknown>).measure as never)) {
     const m = measure as Record<string, unknown>;
@@ -120,9 +122,18 @@ export function parseDocument(bytes: Uint8Array | string): NormalizedScore | { e
     for (const rawNote of arr(m.note as never)) {
       const n = rawNote as Record<string, unknown>;
       if (n.grace !== undefined) { warnings.push("Grace notes were skipped."); continue; }
+
+      const voice = n.voice !== undefined ? String(n.voice) : undefined;
+      if (voice !== undefined && firstVoice === undefined) firstVoice = voice;
+      if (voice !== undefined && firstVoice !== undefined && voice !== firstVoice) {
+        sawExtraVoice = true;
+        continue;
+      }
+
       const isRest = n.rest !== undefined;
-      const type = TYPE_MAP[String(n.type ?? "")] ?? "q";
-      if (!TYPE_MAP[String(n.type ?? "")]) warnings.push(`Unsupported note type "${n.type}" treated as quarter.`);
+      const rawType = n.type !== undefined ? String(n.type) : "";
+      const type = TYPE_MAP[rawType] ?? "q";
+      if (rawType && !TYPE_MAP[rawType]) warnings.push(`Unsupported note type "${rawType}" treated as quarter.`);
       const dots = arr(n.dot as never).length;
       if (dots > 1) warnings.push("Double-dotted notes were reduced to a single dot.");
       const tm = n["time-modification"] as Record<string, unknown> | undefined;
@@ -137,10 +148,14 @@ export function parseDocument(bytes: Uint8Array | string): NormalizedScore | { e
 
       const ties = arr(n.tie as never).map((t) => (t as Record<string, unknown>)["@_type"]);
 
+      const pitch = isRest ? undefined : (n.pitch as Record<string, unknown> | undefined);
+      const pitchless = !isRest && !pitch;
+      if (pitchless) warnings.push("An unpitched note was imported as a rest.");
+
       notes.push({
-        isRest,
+        isRest: isRest || pitchless,
         chord: n.chord !== undefined,
-        pitchMidi: isRest ? undefined : noteMidi(n.pitch as Record<string, unknown>),
+        pitchMidi: pitch ? noteMidi(pitch) : undefined,
         type,
         dots: Math.min(dots, 1),
         triplet,
@@ -167,5 +182,6 @@ export function parseDocument(bytes: Uint8Array | string): NormalizedScore | { e
   }
 
   if (!headerSeen) warnings.push("No key signature found; defaulted to C.");
-  return { header, measures, warnings };
+  if (sawExtraVoice) warnings.push("Extra voices were ignored; only the first voice was imported.");
+  return { header, measures, warnings: [...new Set(warnings)] };
 }
