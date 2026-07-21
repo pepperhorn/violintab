@@ -102,6 +102,11 @@ describe("noteToMidi on the cello", () => {
     expect(noteToMidi({ string: cA, finger: 4 }, CELLO)).toBe(62);
     // higher position: D string, 3rd position, 4th finger = B3 (59)
     expect(noteToMidi({ string: cD, finger: 4, position: 3 }, CELLO)).toBe(59);
+    // three-finger positions (5-7): A string 7th position 1st finger = A4 (69),
+    // the octave above open A3
+    expect(noteToMidi({ string: cA, finger: 1, position: 7 }, CELLO)).toBe(69);
+    // C string 5th position 1st finger = A2 (45)
+    expect(noteToMidi({ string: cC, finger: 1, position: 5 }, CELLO)).toBe(45);
   });
 
   it("L/H shift a cello finger a semitone", () => {
@@ -110,8 +115,8 @@ describe("noteToMidi on the cello", () => {
     expect(noteToMidi({ string: cC, finger: 1, level: "H" }, CELLO)).toBe(39);
   });
 
-  it("returns null beyond the charted range (positions 1-4)", () => {
-    expect(noteToMidi({ string: cA, finger: 4, position: 5 }, CELLO)).toBeNull();
+  it("returns null beyond the charted range (positions 1-7)", () => {
+    expect(noteToMidi({ string: cA, finger: 4, position: 8 }, CELLO)).toBeNull();
   });
 
   it("the cello chart is strictly ascending per row", () => {
