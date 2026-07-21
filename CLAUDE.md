@@ -77,9 +77,10 @@ spec table together: `docs/superpowers/specs/2026-06-04-violin-tab-writer-design
 **Cello.** `CELLO` is a full instrument config (tuning `A D G C`, open MIDI
 `[57, 50, 43, 36]`, patch `cello`) with its own `CELLO_FINGER_MIDI` chart. Cello
 fingering is *not* a transpose of the violin chart: the closed neck-position hand
-spans a minor third, so adjacent fingers sit a semitone apart. Positions 1–4 are
-charted; half positions and thumb position are future work, so pitches above the
-charted range (roughly G4) resolve to null. Playback and MusicXML import both work
+spans a minor third, so adjacent fingers sit a semitone apart. All seven neck
+positions are charted (positions 5–7 are the "three-finger" positions, modelled
+as closed frames); thumb position (above 7th) is future work, so pitches above
+the charted range (~C5) resolve to null. Playback and MusicXML import both work
 for in-range cello notes.
 
 ## Conventions

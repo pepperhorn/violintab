@@ -66,9 +66,9 @@ describe("parseNote on the cello", () => {
     expect(parseNote("e1", CELLO)).toBeNull();
   });
 
-  it("supports the charted positions and rejects those beyond them (1-4)", () => {
-    expect(parseNote("(4)c1", CELLO)).toEqual({ string: 4, finger: 1, position: 4 });
-    expect(parseNote("(5)c1", CELLO)).toEqual({ error: expect.stringContaining("out of range") });
+  it("supports the charted neck positions and rejects those beyond them (1-7)", () => {
+    expect(parseNote("(7)c1", CELLO)).toEqual({ string: 4, finger: 1, position: 7 });
+    expect(parseNote("(8)c1", CELLO)).toEqual({ error: expect.stringContaining("out of range") });
   });
 });
 

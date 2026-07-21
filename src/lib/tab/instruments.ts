@@ -29,24 +29,32 @@ const VIOLIN_FINGER_MIDI: Instrument["naturalFingerMidi"] = {
  * neck-position hand spans only a minor third across fingers 1-4, so adjacent
  * fingers sit a semitone apart (unlike the violin's wider frame). Each row is
  * therefore mostly consecutive semitones; the top gap widens to a whole tone in
- * the upper neck positions (e.g. C string 3rd position 3->4 = G2->A2). Rows stay
- * strictly ascending. `L` / `H` shift a finger -/+ 1 semitone (see
- * pitch.ts:noteToMidi). Positions 1-4 are supported; half positions and thumb
- * position are future work.
+ * some of the four-finger positions (e.g. C string 3rd position 3->4 = G2->A2).
+ * Rows stay strictly ascending. `L` / `H` shift a finger -/+ 1 semitone (see
+ * pitch.ts:noteToMidi).
  *
- * Keyed by string letter; MIDI per finger [f1, f2, f3, f4]:
- *   C: 1st D2 E2 F2 · 2nd E2 F2 G2 · 3rd F2 G2 A2 · 4th G2 A2 B2
- *   G: 1st A2 B2 C3 · 2nd B2 C3 D3 · 3rd C3 D3 E3 · 4th D3 E3 F3
- *   D: 1st E3 F#3 G3 · 2nd F#3 G3 A3 · 3rd G3 A3 B3 · 4th A3 B3 C4
- *   A: 1st B3 C#4 D4 · 2nd C#4 D4 E4 · 3rd D4 E4 F4 · 4th E4 F4 G4
- * (the 2nd finger, and any finger the chart omits, is the chromatic step in
- * between — e.g. C string 1st position finger 2 = Eb2/D#2.)
+ * Positions 1-4 are the four-finger neck positions from the source chart. The
+ * 1st finger climbs the open string's major scale (degrees 2-3-4-5), so 5th-7th
+ * continue it onto degrees 6, 7 and the octave — e.g. the A string's 7th-position
+ * 1st finger is A4, the octave above the open A3 (the top-of-neck landmark).
+ * Positions 5-7 are the "three-finger" positions where the notes crowd together
+ * and fingers 1-2-3 do the work; their natural frame is the closed hand
+ * (consecutive semitones, 4th finger a minor third above the 1st). Thumb
+ * position (above 7th) is future work.
+ *
+ * Keyed by string letter; natural notes per finger [f1 f2 f3 f4]:
+ *   C: 1 D2·E2·F2  2 E2·F2·G2  3 F2·G2·A2  4 G2·A2·B2  5 A2·B2·C3  6 B2·C3·D3  7 C3·D3·D#3
+ *   G: 1 A2·B2·C3  2 B2·C3·D3  3 C3·D3·E3  4 D3·E3·F3  5 E3·F#3·G3 6 F#3·G3·A3 7 G3·A3·A#3
+ *   D: 1 E3·F#3·G3 2 F#3·G3·A3 3 G3·A3·B3  4 A3·B3·C4  5 B3·C#4·D4 6 C#4·D4·E4 7 D4·E4·F4
+ *   A: 1 B3·C#4·D4 2 C#4·D4·E4 3 D4·E4·F4  4 E4·F4·G4  5 F#4·G#4·A4 6 G#4·A4·B4 7 A4·B4·C5
+ * (fingers the chart omits are the chromatic step between — e.g. C string 1st
+ * position finger 2 = Eb2/D#2. `L`/`H` reach the neighbours of any natural finger.)
  */
 const CELLO_FINGER_MIDI: Instrument["naturalFingerMidi"] = {
-  C: { 1: [38, 39, 40, 41], 2: [40, 41, 42, 43], 3: [41, 42, 43, 45], 4: [43, 44, 45, 47] },
-  G: { 1: [45, 46, 47, 48], 2: [47, 48, 49, 50], 3: [48, 49, 50, 52], 4: [50, 51, 52, 53] },
-  D: { 1: [52, 53, 54, 55], 2: [54, 55, 56, 57], 3: [55, 56, 57, 59], 4: [57, 58, 59, 60] },
-  A: { 1: [59, 60, 61, 62], 2: [61, 62, 63, 64], 3: [62, 63, 64, 65], 4: [64, 65, 66, 67] },
+  C: { 1: [38, 39, 40, 41], 2: [40, 41, 42, 43], 3: [41, 42, 43, 45], 4: [43, 44, 45, 47], 5: [45, 46, 47, 48], 6: [47, 48, 49, 50], 7: [48, 49, 50, 51] },
+  G: { 1: [45, 46, 47, 48], 2: [47, 48, 49, 50], 3: [48, 49, 50, 52], 4: [50, 51, 52, 53], 5: [52, 53, 54, 55], 6: [54, 55, 56, 57], 7: [55, 56, 57, 58] },
+  D: { 1: [52, 53, 54, 55], 2: [54, 55, 56, 57], 3: [55, 56, 57, 59], 4: [57, 58, 59, 60], 5: [59, 60, 61, 62], 6: [61, 62, 63, 64], 7: [62, 63, 64, 65] },
+  A: { 1: [59, 60, 61, 62], 2: [61, 62, 63, 64], 3: [62, 63, 64, 65], 4: [64, 65, 66, 67], 5: [66, 67, 68, 69], 6: [68, 69, 70, 71], 7: [69, 70, 71, 72] },
 };
 
 /** The violin. Strings run high -> low so string 1 (E) is the top staff line and
@@ -63,14 +71,14 @@ export const VIOLIN: Instrument = {
 
 /** The cello. Same four-string layout, tuned an octave-plus below the violin:
  *  string 1 (A) is the top staff line and string 4 (C) is the bottom. Fingered
- *  pitches resolve through CELLO_FINGER_MIDI (positions 1-4). */
+ *  pitches resolve through CELLO_FINGER_MIDI (neck positions 1-7). */
 export const CELLO: Instrument = {
   id: "cello",
   label: "Cello",
   tuning: ["A", "D", "G", "C"], // string 1 -> 4
   openMidi: [57, 50, 43, 36], // A3, D3, G2, C2
   patch: "cello", // MusyngKite soundfont instrument name
-  maxPosition: 4,
+  maxPosition: 7,
   naturalFingerMidi: CELLO_FINGER_MIDI,
 };
 
