@@ -19,6 +19,8 @@ import {
   triggerDownload,
 } from "@/lib/scaleExport";
 import { downloadPdfFromContainer } from "@/lib/tab/tabExport";
+import { importMusicXml } from "@/lib/import/musicxml";
+import { isImportError } from "@/lib/import/types";
 
 const MAJOR_KEYS = ["C", "G", "D", "A", "E", "B", "F#", "Db", "Ab", "Eb", "Bb", "F"];
 const MINOR_KEYS = ["Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m", "Bbm", "Fm", "Cm", "Gm", "Dm"];
@@ -65,6 +67,9 @@ export function TabWorkbench() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [cursorIndex, setCursorIndex] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
+  const [importError, setImportErrorMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const timeSig = useMemo(() => {
     const [num, den] = timeSigStr.split("/").map(Number);
@@ -171,6 +176,23 @@ export function TabWorkbench() {
       playerRef.current = null;
     };
   }, []);
+
+  const onImportFile = async (file: File) => {
+    setImportErrorMsg(null);
+    setImportWarnings([]);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const result = importMusicXml(bytes, { fallbackInstrument: instrumentId });
+    if (isImportError(result)) {
+      setImportErrorMsg(result.error);
+      return;
+    }
+    setInstrumentId(result.instrument);
+    setText(result.text);
+    setKeySig(result.keySig);
+    setTimeSigStr(result.timeSig);
+    setBpm(result.tempo);
+    setImportWarnings(result.warnings);
+  };
 
   const filename = (ext: string) => safeFilename([title.trim() || `${instrument.id}-tab`], ext);
   const downloadSvg = () => downloadSvgFromContainer(previewRef.current, filename("svg"));
@@ -322,7 +344,43 @@ export function TabWorkbench() {
             >
               Beams/stems: {showStems ? "on" : "off"}
             </Button>
+            <Button
+              className="import-musicxml-btn"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Import MusicXML
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".musicxml,.xml,.mxl"
+              className="import-musicxml-input hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void onImportFile(f);
+                e.target.value = ""; // allow re-importing the same file
+              }}
+            />
           </div>
+          {importError && (
+            <div className="import-error text-xs text-red-600">{importError}</div>
+          )}
+          {importWarnings.length > 0 && (
+            <div className="import-warnings text-xs text-amber-600 flex flex-col gap-0.5">
+              {importWarnings.map((w, i) => (
+                <div key={i}>⚠ {w}</div>
+              ))}
+              <button
+                type="button"
+                className="import-warnings-dismiss self-start underline"
+                onClick={() => setImportWarnings([])}
+              >
+                dismiss
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -529,7 +587,7 @@ export function TabWorkbench() {
               <code>q:{s1}1</code> duration · append <code>d</code> dotted, <code>t</code> triplet ·{" "}
               <code>q:{s1}1:{s2}2</code> double stop · <code>r</code> rest · <code>x</code> repeat ·{" "}
               <code>~</code> tie ·{" "}
-              <code>|</code> barline · <code>|:</code> … <code>:|</code> repeat (<code>:|x3</code> count) ·{" "}
+              <code>|</code> barline · <code>||</code> double barline · <code>|:</code> … <code>:|</code> repeat (<code>:|x3</code> count) ·{" "}
               <code>[Am]</code> chord symbol
             </div>
           )}

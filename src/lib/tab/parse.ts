@@ -65,10 +65,12 @@ interface BarToken {
   start?: boolean; // forward repeat opens here ("|:")
   end?: boolean; // backward repeat closes here (":|")
   count?: number; // play-count on a backward repeat (":|x3")
+  double?: boolean; // double barline closes here ("||")
 }
 
-/** Recognise a barline / repeat token: `|`, `|:`, `:|`, `:|:`, `:|x3`. */
+/** Recognise a barline / repeat token: `|`, `||`, `|:`, `:|`, `:|:`, `:|x3`. */
 export function parseBarToken(raw: string): BarToken | null {
+  if (raw === "||") return { double: true };
   if (raw === "|") return {};
   if (raw === "|:") return { start: true };
   if (raw === ":|:") return { start: true, end: true };
@@ -93,13 +95,16 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
   let pendingChordLine = 0;
   let pendingRepeatStart = false;
 
-  function closeMeasure(forced: boolean, repeat?: { end?: boolean; count?: number }) {
+  function closeMeasure(forced: boolean, bar?: { end?: boolean; count?: number; double?: boolean }) {
     if (curMeasure.length === 0) {
-      // A backward repeat right after a barline attaches to the previous measure.
-      if (repeat?.end && measures.length) {
+      // A barline right after another barline attaches to the previous measure.
+      if ((bar?.end || bar?.double) && measures.length) {
         const prev = measures[measures.length - 1];
-        prev.repeatEnd = true;
-        if (repeat.count) prev.repeatCount = repeat.count;
+        if (bar.end) {
+          prev.repeatEnd = true;
+          if (bar.count) prev.repeatCount = bar.count;
+        }
+        if (bar.double) prev.doubleBarline = true;
       }
       return;
     }
@@ -108,10 +113,11 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
       m.repeatStart = true;
       pendingRepeatStart = false;
     }
-    if (repeat?.end) {
+    if (bar?.end) {
       m.repeatEnd = true;
-      if (repeat.count) m.repeatCount = repeat.count;
+      if (bar.count) m.repeatCount = bar.count;
     }
+    if (bar?.double) m.doubleBarline = true;
     measures.push(m);
     curMeasure = [];
     curFrac = 0;
@@ -138,7 +144,10 @@ export function parseTab(text: string, opts: ParseOptions): TabDoc {
       // Barline / repeat
       const bar = parseBarToken(raw);
       if (bar) {
-        closeMeasure(true, bar.end ? { end: true, count: bar.count } : undefined);
+        closeMeasure(
+          true,
+          bar.end || bar.double ? { end: bar.end, count: bar.count, double: bar.double } : undefined,
+        );
         if (bar.start) pendingRepeatStart = true;
         continue;
       }

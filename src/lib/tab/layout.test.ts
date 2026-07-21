@@ -4,17 +4,30 @@ import { layoutTab } from "./layout";
 import { parseTab } from "./parse";
 import type { TimeSig } from "./types";
 
-function beamGroups(text: string, timeSig: TimeSig = { num: 4, den: 4 }) {
+function layoutOf(text: string, timeSig: TimeSig = { num: 4, den: 4 }) {
   const doc = parseTab(text, { keySig: "C", timeSig });
-  const layout = layoutTab(doc, {
+  return layoutTab(doc, {
     width: 4000,
     tuning: ["E", "A", "D", "G"],
     stringCount: 4,
     timeSig,
     showStems: true,
   });
-  return layout.systems.flatMap((s) => s.beats).map((b) => b.beamGroup);
 }
+
+function beamGroups(text: string, timeSig: TimeSig = { num: 4, den: 4 }) {
+  return layoutOf(text, timeSig).systems.flatMap((s) => s.beats).map((b) => b.beamGroup);
+}
+
+describe("barlines", () => {
+  it("emits a double barline kind for a `||` measure", () => {
+    const kinds = layoutOf("q:e0 q:e1 q:e2 q:e3 || q:a0 a1 a2 a3")
+      .systems.flatMap((s) => s.barlines)
+      .map((b) => b.kind);
+    expect(kinds[0]).toBe("double");
+    expect(kinds[1]).toBe("final"); // last measure still closes with the final barline
+  });
+});
 
 describe("beaming", () => {
   it("breaks 4/4 eighth-note beams at the half bar (between 2& and 3)", () => {

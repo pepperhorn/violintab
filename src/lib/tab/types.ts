@@ -67,6 +67,7 @@ export interface Beat {
 export interface Measure {
   beats: Beat[];
   forcedBarline: boolean; // true when closed by an explicit barline token
+  doubleBarline?: boolean; // draw a double barline at this measure's right ("||")
   repeatStart?: boolean; // draw a forward-repeat barline at this measure's left
   repeatEnd?: boolean; // draw a backward-repeat barline at this measure's right
   repeatCount?: number; // play-count shown at a backward repeat (e.g. x3)

@@ -374,6 +374,8 @@ function drawBarlines(
     const k = `bar-${i}`;
     if (bar.kind === "single") {
       out.push(vline(x, 1.5, k));
+    } else if (bar.kind === "double") {
+      out.push(vline(x - 3, 1.5, `${k}d1`), vline(x, 1.5, `${k}d2`));
     } else if (bar.kind === "final") {
       out.push(vline(x - 3.5, 1.5, `${k}thin`), vline(x, 3, `${k}thick`));
     } else if (bar.kind === "repeatStart") {

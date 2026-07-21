@@ -38,7 +38,7 @@ export interface PlacedBeat {
   tie?: boolean; // tied into the next beat
 }
 
-export type BarlineKind = "single" | "final" | "repeatStart" | "repeatEnd";
+export type BarlineKind = "single" | "double" | "final" | "repeatStart" | "repeatEnd";
 
 export interface PlacedBarline {
   x: number;
@@ -284,6 +284,8 @@ export function layoutTab(doc: TabDoc, opts: LayoutOptions): TabLayout {
       const barX = x + LAYOUT.MEASURE_PAD / 2;
       const kind: BarlineKind = measure.repeatEnd
         ? "repeatEnd"
+        : measure.doubleBarline
+        ? "double"
         : localMeasureIndex === totalMeasures - 1
         ? "final"
         : "single";
