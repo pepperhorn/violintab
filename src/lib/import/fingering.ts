@@ -35,7 +35,7 @@ export function buildPlacementIndex(instrument: Instrument): Map<number, Placeme
         for (const level of [undefined, "L", "H"] as const) {
           const note: ViolinNote = { string: s + 1, finger };
           if (level) note.level = level;
-          if (position > 1) note.position = position;
+          if (position !== 1) note.position = position;
           add(noteToMidi(note, instrument), note, position, s + 1);
         }
       }

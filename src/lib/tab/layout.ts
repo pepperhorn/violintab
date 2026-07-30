@@ -19,6 +19,8 @@ export const LAYOUT = {
 
 const ORDINALS = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 export function positionLabel(pos: number): string {
+  if (pos === 0.5) return "1/2 pos.";
+  if (pos % 1 !== 0) return `${pos} pos.`;
   return `${ORDINALS[pos] ?? `${pos}th`} pos.`;
 }
 

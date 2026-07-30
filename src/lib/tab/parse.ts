@@ -27,7 +27,7 @@ const EPS = 1e-9;
 /** A single note token: `(P)?<string><L|H>?<finger>`, e.g. `e0`, `aH2`, `(3)e1`.
  *  The string letter (any of a-g) is validated against the instrument's tuning
  *  in parseNote. Case-insensitive on the string letter and the L/H level. */
-const NOTE_RE = /^(?:\((\d+)\))?([a-g])([lh])?([0-4])$/i;
+const NOTE_RE = /^(?:\((\d+(?:\.5)?|1\/2)\))?([a-g])([lh])?([0-4])$/i;
 
 /** Parse one note segment for the given instrument (violin by default). Returns
  *  the note, a specific error, or null when the text isn't a note token for this
@@ -36,14 +36,16 @@ export function parseNote(seg: string, instrument: Instrument = VIOLIN): ViolinN
   const m = NOTE_RE.exec(seg);
   if (!m) return null;
 
-  const position = m[1] ? Number(m[1]) : 1;
+  const position = m[1] ? (m[1] === "1/2" ? 0.5 : Number(m[1])) : 1;
   const string = stringIndexFromLetter(m[2], instrument);
   const level = m[3] ? (m[3].toUpperCase() as FingerLevel) : undefined;
   const finger = Number(m[4]);
 
   if (string === null) return null; // letter isn't one of this instrument's strings
-  if (position < 1 || position > instrument.maxPosition) {
-    return { error: `position ${position} out of range (1-${instrument.maxPosition}) in "${seg}"` };
+  const chartPositions = Object.values(instrument.naturalFingerMidi).flatMap((rows) => Object.keys(rows).map(Number));
+  const minPosition = chartPositions.length ? Math.min(...chartPositions) : 1;
+  if (position < minPosition || position > instrument.maxPosition) {
+    return { error: `position ${position} out of range (${minPosition}-${instrument.maxPosition}) in "${seg}"` };
   }
   if (finger === 0 && level) {
     return { error: `open string can't take a low/high fingering in "${seg}"` };
