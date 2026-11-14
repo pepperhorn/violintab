@@ -115,16 +115,27 @@
 
 .page-eyebrow {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   font-family: 'Space Mono', monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.22em;
   color: var(--ink);
-  background: var(--pop-yellow);
+  background: var(--paper);
   border: 2.5px solid var(--ink);
-  padding: 0.35rem 0.7rem;
+  padding: 0.3rem 0.4rem 0.3rem 0.7rem;
   box-shadow: 3px 3px 0 var(--ink);
   transform: rotate(-2.5deg);
+}
+
+.eyebrow-logo {
+  display: block;
+  width: 1.7em;
+  height: 1.7em;
+  object-fit: cover;
+  border: 2px solid var(--ink);
 }
 
 .page-title {

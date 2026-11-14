@@ -21,6 +21,12 @@ import {
 import { downloadPdfFromContainer } from "@/lib/tab/tabExport";
 import { importMusicXml } from "@/lib/import/musicxml";
 import { isImportError } from "@/lib/import/types";
+import {
+  buildShareUrl,
+  readShareFromUrl,
+  SHARE_VERSION,
+  type SharePayload,
+} from "@/lib/tab/shareLink";
 
 const MAJOR_KEYS = ["C", "G", "D", "A", "E", "B", "F#", "Db", "Ab", "Eb", "Bb", "F"];
 const MINOR_KEYS = ["Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m", "Bbm", "Fm", "Cm", "Gm", "Dm"];
@@ -64,6 +70,7 @@ export function TabWorkbench() {
   const [showLookFeel, setShowLookFeel] = useState(false);
   const [showTabJson, setShowTabJson] = useState(false);
   const [jsonCopied, setJsonCopied] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [cursorIndex, setCursorIndex] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -107,6 +114,38 @@ export function TabWorkbench() {
     });
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  // Hydrate from a share link (#tab=...) once on mount, then strip the hash so a
+  // later edit-then-refresh keeps the user's edits instead of reverting.
+  useEffect(() => {
+    const payload = readShareFromUrl();
+    if (!payload) return;
+    setInstrumentId(payload.instrumentId);
+    setText(payload.text);
+    setKeySig(payload.keySig);
+    setTimeSigStr(payload.timeSig);
+    setBpm(payload.bpm);
+    setBarsPerLine(payload.barsPerLine);
+    const s = payload.style;
+    setShowStems(s.showStems);
+    setShowNoteNames(s.showNoteNames);
+    setFontFamily(s.fontFamily);
+    setNoteFontSize(s.noteFontSize);
+    setPositionFontSize(s.positionFontSize);
+    setNoteNameFontSize(s.noteNameFontSize);
+    setChordFontFamily(s.chordFontFamily);
+    setChordFontSize(s.chordFontSize);
+    setTitle(s.title);
+    setSubtitle(s.subtitle);
+    setFeel(s.feel);
+    setShowKey(s.showKey);
+    setHeaderGap(s.headerGap);
+    setTitleSize(s.titleSize);
+    setSubtitleSize(s.subtitleSize);
+    setFeelSize(s.feelSize);
+    setKeySize(s.keySize);
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
   }, []);
 
   const layout = useMemo(
@@ -262,6 +301,46 @@ export function TabWorkbench() {
     const url = URL.createObjectURL(blob);
     triggerDownload(url, filename("json"));
     URL.revokeObjectURL(url);
+  };
+
+  // Snapshot every piece of editor state a link needs to reopen the score.
+  const buildSharePayload = (): SharePayload => ({
+    v: SHARE_VERSION,
+    text,
+    instrumentId,
+    keySig,
+    timeSig: timeSigStr,
+    bpm,
+    barsPerLine,
+    style: {
+      showStems,
+      showNoteNames,
+      fontFamily,
+      noteFontSize,
+      positionFontSize,
+      noteNameFontSize,
+      chordFontFamily,
+      chordFontSize,
+      title,
+      subtitle,
+      feel,
+      showKey,
+      headerGap,
+      titleSize,
+      subtitleSize,
+      feelSize,
+      keySize,
+    },
+  });
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(buildShareUrl(buildSharePayload()));
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
   };
 
   const clampSize = (v: string, lo: number, hi: number, fallback: number) =>
@@ -539,6 +618,39 @@ export function TabWorkbench() {
             </Button>
             <Button size="sm" variant="outline" onClick={downloadPdf} className="download-pdf-btn">
               PDF
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={copyShareLink}
+              className="share-link-btn"
+              aria-label="Copy a shareable link to this tab"
+            >
+              {shareCopied ? (
+                "Copied!"
+              ) : (
+                <>
+                  <svg
+                    className="share-icon"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="18" cy="5" r="3" />
+                    <circle cx="6" cy="12" r="3" />
+                    <circle cx="18" cy="19" r="3" />
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                  </svg>
+                  Share
+                </>
+              )}
             </Button>
           </div>
           {exportError && (
