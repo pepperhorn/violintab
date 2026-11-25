@@ -14,6 +14,9 @@ export const prerender = true;
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>Violin Tab Writer</title>
+    {import.meta.env.PROD && (
+      <script is:inline defer src="https://analytics.pepperhorn.com/script.js" data-website-id="e7f8bc21-6dd9-477b-a5e1-c8c761ac5055"></script>
+    )}
   </head>
   <body class="min-h-screen bg-background text-foreground">
     <span class="reg-mark reg-tl" aria-hidden="true"></span>
